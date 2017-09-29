@@ -1,4 +1,4 @@
-<img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/Screenshop.png" align="right"/>
+<img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/Screenshot.png" align="right"/>
 # Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration
 Beta version of the Samsung WiFi
 

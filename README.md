@@ -5,6 +5,14 @@ Beta version of the Samsung WiFi
 
 The Samsung WiFi Soundbars are a member of the Samsung Multiroom Speakers.  This device handler for SmartThings integration was completed using the commands from Port 55001, as defined at the site "https://sites.google.com/site/moosyresearch/projects/samsung_shape".  My appreciation for the many participants in that effort for their instrumental research and discoveries.
 
+#  Updates
+
+10-03-17.  First Beta Update with following changes:
+a.  Improved TuneIn and Amazon Playlist preset actions.
+b.  Moved Source select to preferences to allow user to select valid sources for their devices (There are nine sources with different selection based on product.
+c.  Updated instructions for Source Selection.
+
+
 # Integration Capabilities.
 
 This integration provides the following capabilities:

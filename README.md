@@ -13,6 +13,8 @@ a.  Improved TuneIn and Amazon Playlist preset actions.
 
 b.  Moved Source select to preferences to allow user to select valid sources for their devices (There are nine sources with different selection based on product.
 
+10-05-17.  Reworked flows and fine-tuned to improve performance.
+
 # Integration Capabilities.
 
 This integration provides the following capabilities:

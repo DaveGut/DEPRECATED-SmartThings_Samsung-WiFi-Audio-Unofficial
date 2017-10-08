@@ -31,6 +31,6 @@ This Device Handler has the following keys outside of the music control area:
   e)  Rear Level Slider:  Soundbar only.  Must have soundbar rear speakers.
   f)  Presets.  Allow seletion of six preset "stations" or "playlists".  See instruction,
   
-#  Next Update
+#  Next Update.
 
 In next update, the plan is to incorporate a more automated (and user friendly) means of creating presets.

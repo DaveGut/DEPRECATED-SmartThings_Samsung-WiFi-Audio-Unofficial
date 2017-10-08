@@ -244,20 +244,11 @@ def updated() {
 		sendEvent(name: "preset6", value: preset6)
 	}
 	if(device.currentValue("source") != newSource){
+log.debug "AT UPDATED Source with newsource = ${newSource} and current = ${device.currentValue("source")}"
 		sendCmd("/UIC?cmd=%3Cname%3ESetFunc%3C/name%3E" +
         		"%3Cp%20type=%22str%22%20name=%22function%22%20val=%22${newSource}%22/%3E")
 	}
-	refresh()
 }
-/*
-Get hardware type changes
-	attribute hwType
-    method getHardwareType
-    Install - permanent command
-    Update - temp command
-    preset1 - temp command and markup
-    parse method:
-*/
 def getHardwareType() {
 	sendCmd("/UIC?cmd=%3Cname%3EGetSoftwareVersion%3C/name%3E")
     runIn(2, setVolumeScale)
@@ -288,7 +279,6 @@ def off() {
 def setLevel(level) {
 	def scale = device.currentValue("volScale")
 	def intLevel = Math.round(scale*level/100).toInteger()
-log.debug "Volume Level to be set to ${intLevel}"
 	sendCmd("/UIC?cmd=%3Cname%3ESetVolume%3C/name%3E" +
     		"%3Cp%20type=%22dec%22%20name=%22volume%22%20val=%22${intLevel}%22/%3E")
 }
@@ -737,7 +727,9 @@ void parseResponse(resp) {
 			if (device.currentValue("submode") == "dlna") {
 				sendEvent(name: "tracklength", value: respData.timelength.toInteger())
 			}
-			sendEvent(name: "playtime", value: respData.playtime.toInteger())
+            if (respData.playtime != ""){
+				sendEvent(name: "playtime", value: respData.playtime.toInteger())
+            }
             schedSetTrackDescription()
 			break
 //	----- TUNE PRESET METHODS -----

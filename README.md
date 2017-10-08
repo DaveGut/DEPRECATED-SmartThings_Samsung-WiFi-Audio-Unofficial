@@ -25,11 +25,16 @@ Installation Instructions are provided in the Documents folder.
 This Device Handler has the following keys outside of the music control area:
 
   a)  Active/Standby: (left top corner).  Places speakers into pause and soundbars off.
+  
   b)  Source:  Next to Activty/Standby.  Displays source, no user action.
+  
   c)  Refresh Display:  Updates display data (for use when enetering from the Multiroom app).
+  
   d)  Equalizer:  Advances through the preset equalizer modes (create in Multiroom app).
+  
   e)  Rear Level Slider:  Soundbar only.  Must have soundbar rear speakers.
-  f)  Presets.  Allow seletion of six preset "stations" or "playlists".  See instruction,
+  
+  f)  Presets.  Allow seletion of six preset "stations" or "playlists".  See instruction.
   
 #  Next Update
 

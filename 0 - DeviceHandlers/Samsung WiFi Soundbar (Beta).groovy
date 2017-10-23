@@ -49,7 +49,7 @@ Release Information:
 			the press "Update Display".
 			
 NEW CAPABILITY HIGHLIGHT:  PRESETS.
-I.  TO DELETE A PRESET
+I.  TO ADD A PRESET
 	a.	Find a preset with identification "vacant"
 	b.	Have the channel/playlist playing on the speaker.  Path limitations:
 		1.	Amazon.  playlists in "Playlists".

@@ -1,6 +1,6 @@
 /*
 Samsung WiFi Speaker - Soundbar
-Beta Version 3
+Beta Version 4
 
 Copyright 2017 Dave Gutheinz
 
@@ -22,28 +22,58 @@ internet data related to the 55001 port implementation of the
 Samsung Wireless Speakers.
 
 Release Information:
-	09-28-17	Beta Release of Manual Installation Version.
-	10-03-17	Update Amazon and TuneIn Preset attainment.
-				Add in Sensor and Actuator capability.
-				Update Source selection to be a preference.
-	10-05-17	Cleanup of code to improve performance.
-    10-08-17	Update to support speakers in addition to
-    			soundbars.
-                a.  Change power to Active/Standby
-                b.  Added Equalizer Preset Toggle
-                c.  Removed Bass and Treble (not supported
-                	speakers)
-          		d.	Added scaling to volume
-                	1.  Soundbar 0 .. 100
-                    2.  Speaker 0 .. 30
-	10-11-17	a.	Tuned each path for best performance.
-    			b.	Reduced number of attributes
-                c.	Moved Rear Speaker control to Preferences.
-                d.	Added two presets (now 8)
+	10-11	a.	Tuned each path for best performance.
+			b.	Reduced number of attributes
+			c.	Moved Rear Speaker control to Preferences.
+			d.	Added two presets (now 8)
+	10-16	a.  Updated shuffle/repeat for Amazon.
+			b.	Changed non-display states to data.
+			c.	Updated play preset functions.
+				1.	Added 8tracks explicit support
+				2.	Created generic player (in prep for auto-presets).
+			d.	For Channel Players, updated Previous
+				to work on single press.
+	10-19	Create Beta.4 version in preparation for adding
+			tile functions.
+	10-23	Create Beta.5 version with following changes
+			1.	Automatic preset adding functions
+			2.	Delete preset functions
+			3.	Work-around for some SmartThings environment errors.
+			4.	Tuned PresetPlay functions.
+	Known Issues
+		1.	Speaker/Soundbar sometimes spews data across the interface
+			causing errors.  Retry for play, use "Update Display" for
+			dusplay mis-matches.
+		2.	TuneIn is slow in starting.  When occurs verified on
+			Multiroom App.  Press play several times until it plays, 
+			the press "Update Display".
+			
+NEW CAPABILITY HIGHLIGHT:  PRESETS.
+I.  TO DELETE A PRESET
+	a.	Find a preset with identification "vacant"
+	b.	Have the channel/playlist playing on the speaker.  Path limitations:
+		1.	Amazon.  playlists in "Playlists".
+		2.	Amazon Prime.  Playlists in "Playlists" or in <"My Music", "Playlists">
+		3.	iHeartRadio.  Channels in the "Favorites" folder.
+		4.	Pandora.  Stations aready at the top level.
+		6.	TuneIn.  No Limitation.
+		7.	8tracks. No Limitation.
+		8.	Other content players.  Programed for default, w/o limitation.  may
+			not work.  If it works, great.  If not, contact author.
+	c.	Press the "vacant" preset tile. Text will change to "Add Preset?"
+	d.	Press the preset tile again.  Text will change to "updating" followed
+		by title.
+	e.	To not add the preset, do NOT press the preset tile a second time.
+II.	TO DELETE A PRESET.
+	a.	Press the "Delete Preset" tile.  Text will change to
+		"SELECT PRESET TO DELETE".  If you press this, the process will abort.
+	b.	Press the preset you want to delete.  Text on the Delete Preset tile
+		will change to "PRESS TO DELETE preset_n".
+	c.	Press the Delete Preset tile again (within 10 seconds) to delete the preset.
 */
 
 metadata {
-	definition (name: "Samsung WiFi Speaker-Soundbar", namespace: "Beta.3", author: "Dave Gutheinz") {
+	definition (name: "Samsung WiFi Speaker-Soundbar", namespace: "Beta.5", author: "David Gutheinz") {
 		capability "Switch"
 		capability "Refresh"
 		capability "Music Player"
@@ -57,28 +87,30 @@ metadata {
 		attribute "shuffle", "string"
 //	----- SOUNDBAR CONTROL -----
 		command "setLevel"
-		command "setRear"
 		command "setEqPreset"
-        attribute "eqPreset", "string"
-		attribute "rearLevel", "string"
-		attribute "source", "string"
+		attribute "eqPreset", "string"
 //	----- PRESETS -----
-		command "preset1"
-		command "preset2"
-		command "preset3"
-		command "preset4"
-		command "preset5"
-		command "preset6"
-		command "preset7"
-		command "preset8"
-		attribute "preset1", "string"
-		attribute "preset2", "string"
-		attribute "preset3", "string"
-		attribute "preset4", "string"
-		attribute "preset5", "string"
-		attribute "preset6", "string"
-		attribute "preset7", "string"
-		attribute "preset8", "string"
+		command "preset_1"
+		command "preset_2"
+		command "preset_3"
+		command "preset_4"
+		command "preset_5"
+		command "preset_6"
+		command "preset_7"
+		command "preset_8"
+		command "addPreset"
+		command "deletePreset"
+		command "stopDeletePreset"
+		command "finishDeletePreset"
+		attribute "preset_1", "string"
+		attribute "preset_2", "string"
+		attribute "preset_3", "string"
+		attribute "preset_4", "string"
+		attribute "preset_5", "string"
+		attribute "preset_6", "string"
+		attribute "preset_7", "string"
+		attribute "preset_8", "string"
+		attribute "deletePresetState", "string"
 	}
 	tiles(scale: 2) {
 //	----- PLAYER CONTROL TILES -----
@@ -91,10 +123,10 @@ metadata {
 				attributeState("paused", label:"Paused", action:"play", nextState: "playing")
 				attributeState("playing", label:"Playing", action:"pause", nextState: "paused")
 			}
-			tileAttribute("device.previous", key: "PREVIOUS_TRACK") {
+			tileAttribute("previous", key: "PREVIOUS_TRACK") {
 				attributeState("default", action:"previousTrack")
 			}
-			tileAttribute("device.next", key: "NEXT_TRACK") {
+			tileAttribute("next", key: "NEXT_TRACK") {
 				attributeState("default", action:"nextTrack")
 			}
 			tileAttribute ("device.level", key: "SLIDER_CONTROL") {
@@ -120,57 +152,81 @@ metadata {
 		}
 //	----- SOUNDBAR CONTROL TILES -----
 		standardTile('switch', 'device.switch', width: 1, height: 1, decoration: 'flat', canChangeIcon: true) {
-			state 'on', label:'Soundbar Power', action:'off', backgroundColor:'#00a0dc', nextState:'off'
-			state 'off', label:'Soundbar Power', action:'on', backgroundColor:'#ffffff', nextState:'on'
-            state 'inactive', label: 'Speaker', action: 'inactive', backgroundColor: '#ffffff'
+			state '1', label:'Soundbar Power', action:'off', backgroundColor:'#00a0dc'
+			state '0', label:'Soundbar Power', action:'on', backgroundColor:'#ffffff'
+			state 'inactive', label: 'Speaker', action: 'inactive', backgroundColor: '#ffffff'
 		}
 		standardTile('updateDisplay', 'updateDisplay', width: 1, height: 1,  decoration: 'flat') {
 			state ('default', label: 'Refresh Display', action: 'refresh')
 		}
 		standardTile('eqPreset', 'eqPreset', decoration: 'flat', width: 2, height: 1) {
-        	state 'eqPreset', label: 'Equalizer:\n\r${currentValue}', action: 'setEqPreset'
+			state 'eqPreset', label: 'Equalizer:\n\r${currentValue}', action: 'setEqPreset'
 		}
 		valueTile('blank', 'default', height: 1, width: 2) {
 			state 'default', label:''
 		}
 //	----- PRESET TILES -----
-		standardTile('preset1', 'preset1', decoration: 'flat', width: 2, height: 1) {
-			state 'preset1', label:'${currentValue}', action: 'preset1'
+		standardTile('preset_1', 'preset_1', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_1'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_1'
+			state "default", label:'${currentValue}', action: 'preset_1'
 		}
-		standardTile('preset2', 'preset2', decoration: 'flat', width: 2, height: 1) {
-			state 'preset2', label:'${currentValue}', action: 'preset2'
+		standardTile('preset_2', 'preset_2', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_2'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_2'
+			state "default", label:'${currentValue}', action: 'preset_2'
 		}
-		standardTile('preset3', 'preset3', decoration: 'flat', width: 2, height: 1) {
-			state 'preset3', label:'${currentValue}', action: 'preset3'
+		standardTile('preset_3', 'preset_3', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_3'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_3'
+			state "default", label:'${currentValue}', action: 'preset_3'
 		}
-		standardTile('preset4', 'preset4', decoration: 'flat', width: 2, height: 1) {
-			state 'preset4', label:'${currentValue}', action: 'preset4'
+		standardTile('preset_4', 'preset_4', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_4'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_4'
+			state "default", label:'${currentValue}', action: 'preset_4'
 		}
-		standardTile('preset5', 'preset5', decoration: 'flat', width: 2, height: 1) {
-			state 'preset5', label:'${currentValue}', action: 'preset5'
+		standardTile('preset_5', 'preset_5', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_5'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_5'
+			state "default", label:'${currentValue}', action: 'preset_5'
 		}
-		standardTile('preset6', 'preset6', decoration: 'flat', width: 2, height: 1) {
-			state 'preset6', label:'${currentValue}', action: 'preset6'
+		standardTile('preset_6', 'preset_6', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_6'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_6'
+			state "default", label:'${currentValue}', action: 'preset_6'
 		}
-		standardTile('preset7', 'preset7', decoration: 'flat', width: 2, height: 1) {
-			state 'preset7', label:'${currentValue}', action: 'preset7'
+		standardTile('preset_7', 'preset_7', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_7'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_7'
+			state "default", label:'${currentValue}', action: 'preset_7'
 		}
-		standardTile('preset8', 'preset8', decoration: 'flat', width: 2, height: 1) {
-			state 'preset8', label:'${currentValue}', action: 'preset8'
+		standardTile('preset_8', 'preset_8', decoration: 'flat', width: 2, height: 1) {
+			state "ADD PRESET?", label: '${currentValue}', action: 'preset_8'
+			state "updating", label: '${currentValue}'
+			state "vacant", label:'${currentValue}', action: 'preset_8'
+			state "default", label:'${currentValue}', action: 'preset_8'
 		}
-		valueTile('future', 'default', height: 1, width: 2) {
-			state 'default', label:'future delete preset'
-        }
-        
+		standardTile('deletePreset', 'deletePresetState', decoration: 'flat', height: 1, width: 2) {
+			state "inactive", label: "Delete Preset", action: "deletePreset"
+			state "armed", label: "SELECT PRESET\n\rTO DELETE", action: "stopDeletePreset"
+			state "default", label: '${currentValue}', action: "finishDeletePreset"
+		}
+	}
 		main "main"
 		details(["main", 
-        		 "switch", "updateDisplay", "eqPreset", "shuffle", "repeat",
-//				 "blank", "blank", "blank",
-				 'preset1', 'preset2', 'preset3',
-                 'preset4', 'preset5', 'preset6',
-                 'preset7', 'preset8', 'future'])
+				 "switch", "updateDisplay", "eqPreset", "shuffle", "repeat",
+				 'preset_1', 'preset_2', 'preset_3',
+				 'preset_4', 'preset_5', 'preset_6',
+				 'preset_7', 'preset_8', 'deletePreset'])
 	}
-}
 def sources = [:]
 sources<<["bt":"Bluetooth"]
 sources<<["soundshare":"TV Sound Connect"]
@@ -181,229 +237,191 @@ sources<<["usb":"USB"]
 sources<<["hdmi":"HDMI"]
 sources<<["hdmi1":"HDMI #1"]
 sources<<["hdmi2":"HDMI #2"]
-def players = ["Amazon Station", "Amazon Playlist", "TuneIn", "iHeartRadio", "Pandora"]
+def players = ["Amazon Station", "Amazon Playlist", "Amazon MyMusic", "TuneIn", "iHeartRadio", "Pandora"]
 def rearLevels = ["-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6"]
 preferences {
 	input name: "deviceIP", type: "text", title: "Device IP", required: true, displayDuringSetup: true
 	input name: "newSource", type: "enum", title: "Speaker Source", options: sources, description: "Select source for this speaker", required: false
 	input name: "rearLevel", type: "enum", title: "Rear Speaker Level", options: rearLevels, description: "Select Rear Speaker Vol Level", required: false
-	input name: "preset1Player", type: "enum", title: "Preset 1 Player Name", options: players, description: "Select Player for Preset 2", required: false
-	input name: "preset1Music", type: "text", title: "Preset 1 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset1", type: "text", title: "Preset 1 Short Name", description: "Enter Lable name", required: false
-	input name: "preset2Player", type: "enum", title: "Preset 2 Player Name", options: players, description: "Select Player for Preset 2", required: false
-	input name: "preset2Music", type: "text", title: "Preset 2 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset2", type: "text", title: "Preset 2 Short Name", description: "Enter Lable name", required: false
-	input name: "preset3Player", type: "enum", title: "Preset 3 Player Name", options: players, description: "Select Player for Preset 3", required: false
-	input name: "preset3Music", type: "text", title: "Preset 3 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset3", type: "text", title: "Preset 3 Short Name", description: "Enter Lable name", required: false
-	input name: "preset4Player", type: "enum", title: "Preset 4 Player Name", options: players, description: "Select Player for Preset 4", required: false
-	input name: "preset4Music", type: "text", title: "Preset 4 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset4", type: "text", title: "Preset 4 Short Name", description: "Enter Lable name", required: false
-	input name: "preset5Player", type: "enum", title: "Preset 5 Player Name", options: players, description: "Select Player for Preset 5", required: false
-	input name: "preset5Music", type: "text", title: "Preset 5 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset5", type: "text", title: "Preset 5 Short Name", description: "Enter Lable name", required: false
-	input name: "preset6Player", type: "enum", title: "Preset 6 Player Name", options: players, description: "Select Player for Preset 6", required: false
-	input name: "preset6Music", type: "text", title: "Preset 6 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset6", type: "text", title: "Preset 6 Short Name", description: "Enter Lable name", required: false
-	input name: "preset7Player", type: "enum", title: "Preset 7 Player Name", options: players, description: "Select Player for Preset 7", required: false
-	input name: "preset7Music", type: "text", title: "Preset 7 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset7", type: "text", title: "Preset 7 Short Name", description: "Enter Lable name", required: false
-	input name: "preset8Player", type: "enum", title: "Preset 8 Player Name", options: players, description: "Select Player for Preset 8", required: false
-	input name: "preset8Music", type: "text", title: "Preset 8 Station/Playlist", description: "Enter EXACT title", required: false
-	input name: "preset8", type: "text", title: "Preset 8 Short Name", description: "Enter Lable name", required: false
 }
 
 //	----- INITIALIZATION FUNCTIONS -----
 def installed() {
-//	Get the model and update the type-dependent volume scale
-//	Will activate on the final software update.
-	sendCmd("/UIC?cmd=%3Cname%3EGetSoftwareVersion%3C/name%3E")
-    updateDataValue("currentEqPreset", "0")
-    updated()
-}
-//	----- Update parameters changed in settings -----
-/*
-	Update runs twice.  I am calling a extra routine that 
-    delays actual work for 2 seconds after unschedulihg.
-    First time will be unscheduled before second calling,
-    reducing running to only once.
-*/
-def updated() {
-	delayUpdate()
-}
-def delayUpdate() {
-	unschedule(update)
-    runIn(2, update)
-}
-
-def update() {
+//	Default data values, where required.
 	if (!getDataValue("currentEqPreset")) {
 		updateDataValue("currentEqPreset", "0")
-    }
-/*    
-	Get the model and update the type-dependent volume scale
-	In final version, this will appear only in installed.  It
-	will be commented out with instructions for temporary correction.
-*/
-	sendCmd("/UIC?cmd=%3Cname%3EGetSoftwareVersion%3C/name%3E")
-
-//	Update the source after selection from list.
-//	Future:  Toggle Source in app based on model series.
-//	will take investigation of all wifi models for sources.
-//	Known issue.  No way to update preference.
-	if(device.currentValue("source") != newSource){
-		setSource()
-	}    
-    
-    setRear()
-    
-//	Sync preference presetN with attribute presetN
-//	Future - delete the preference presetN using title for preset name.
-	if(device.currentValue("preset1") != preset1) {
-		sendEvent(name: "preset1", value: preset1)
 	}
-	if(device.currentValue("preset2") != preset2) {
-		sendEvent(name: "preset2", value: preset2)
+	if (!getDataValue("source")) {
+		updateDataValue("source", "wifi")
 	}
-	if(device.currentValue("preset3") != preset3) {
-		sendEvent(name: "preset3", value: preset3)
+	if (!getDataValue("vacantPresetTxt")) {
+		updateDataValue("vacantPresetTxt", "vacant")
 	}
-	if(device.currentValue("preset4") != preset4) {
-		sendEvent(name: "preset4", value: preset4)
+	if (!getDataValue("addPresetArmedTxt")) {
+		updateDataValue("addPresetArmedTxt", "Add Preset?")
 	}
-	if(device.currentValue("preset5") != preset5) {
-		sendEvent(name: "preset5", value: preset5)
+	sendEvent(name: "preset_1", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_2", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_3", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_4", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_5", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_6", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_7", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "preset_8", value: getDataValue("vacantPresetTxt"))
+	sendEvent(name: "deletePresetState", value: "inactive")
+}
+//	----- Update parameters changed in settings -----
+//	Update runs twice.  This causes it to actually run only once.
+def updated() {
+	runIn(1, delayUpdated)
+}
+def delayUpdated() {
+//	determine device model for device-dependent functions 
+//	(needed here to allow changing IP to toggle between devices.
+	log.info "${device.label} Updating values based on Save Preferences"
+	GetSoftwareVersion()
+	if(getDataValue("source") != newSource){
+		SetFunc(newSource)
 	}
-	if(device.currentValue("preset6") != preset6) {
-		sendEvent(name: "preset6", value: preset6)
+	if (getDataValue("hwType") == "HW-" && getDataValue("rearLevel") != rearLevel) {
+		SetRearLevel(rearLevel)
 	}
-	if(device.currentValue("preset7") != preset7) {
-		sendEvent(name: "preset7", value: preset7)
-	}
-	if(device.currentValue("preset8") != preset8) {
-		sendEvent(name: "preset8", value: preset8)
-	}
+}
+//	Device commands associated with installed and updated.
+def SetFunc(newSource) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetFunc%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22function%22%20val=%22${newSource}%22/%3E",
+			"generalResponse")
+}
+def GetFunc() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetFunc%3C/name%3E",
+			"generalResponse")
+}
+def SetRearLevel(rearLevel) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetRearLevel%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22rearlevel%22%20val=%22${rearLevel}%22/%3E" +
+			"%3Cp%20type=%22str%22%20name=%22activate%22%20val=%22on%22/%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22connection%22%20val=%22on%22/%3E",
+			"generalResponse")
+}
+def GetSoftwareVersion() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetSoftwareVersion%3C/name%3E", "generalResponse")
 }
 
 //	SPEAKER/SOUNDBAR CONTROL FUNCTIONS
-/*
-	On-off assumption is that all soundbars have on/of
-    function via the setPowerStatus command (basis:
-    HW-MS650) and speakers do not.  Status is therefore
-    on or off for soundbars.  For speakers, it is inactive.
-    Inactive is set in the response to softwareversion.
-*/
 def on() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetPowerStatus%3C/name%3E" +
-    		"%3Cp%20type=%22dec%22%20name=%22powerstatus%22%20val=%221%22/%3E")
-    runIn(1, refresh)
+	SetPowerStatus("1")
+	play()
+	runIn(1, refresh)
 }
 def off() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetPowerStatus%3C/name%3E" +
-    		"%3Cp%20type=%22dec%22%20name=%22powerstatus%22%20val=%220%22/%3E")
+	pause()
+	SetPowerStatus("0")
+	sendEvent(name: "trackDescription", value: "Power Off")
 }
 def setLevel(level) {
 	def scale = getDataValue("volScale").toInteger()
 	def deviceLevel = Math.round(scale*level/100).toInteger()
-	sendCmd("/UIC?cmd=%3Cname%3ESetVolume%3C/name%3E" +
-    		"%3Cp%20type=%22dec%22%20name=%22volume%22%20val=%22${deviceLevel}%22/%3E")
+	SetVolume(deviceLevel)
 }
 def mute() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetMute%3C/name%3E" +
-    		"%3Cp%20type=%22str%22%20name=%22mute%22%20val=%22on%22/%3E")
+	SetMute("on")
 }
 def unmute() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetMute%3C/name%3E" +
-    		"%3Cp%20type=%22str%22%20name=%22mute%22%20val=%22off%22/%3E")
+	SetMute("off")
 }
-def setSource() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetFunc%3C/name%3E" +
-        	"%3Cp%20type=%22str%22%20name=%22function%22%20val=%22${newSource}%22/%3E")
-	runIn(2, getSource)
-}
-def setRear() {
-	sendCmd("/UIC?cmd=%3Cname%3ESetRearLevel%3C/name%3E" +
-			"%3Cp%20type=%22dec%22%20name=%22rearlevel%22%20val=%22${rearLevel}%22/%3E" +
-			"%3Cp%20type=%22str%22%20name=%22activate%22%20val=%22on%22/%3E" +
-			"%3Cp%20type=%22dec%22%20name=%22connection%22%20val=%22on%22/%3E")
-}
-/*
-	Equalizer preset is three methods.
-    1)	get list to obtain total count of presets.
-    2)	change the preset.
-    3)	get the preset name and update state.
-*/
-
-def setEqPreset() {
-	sendCmd("/UIC?cmd=%3Cname%3EGet7BandEQList%3C/name%3E")
+def setEqPreset(lag) {
+	Get7BandEQList()	
 }
 def cmdEqPreset(totPresets) {
 	def newEqPreset = ""
 	def totalPresets = totPresets.toInteger() - 1
-    def currentEqPreset = getDataValue("currentEqPreset").toInteger()
+	def currentEqPreset = getDataValue("currentEqPreset").toInteger()
 	if(currentEqPreset >= totalPresets) {
-    	newEqPreset = 0
-    } else {
-    	newEqPreset = currentEqPreset + 1
+		newEqPreset = 0
+	} else {
+		newEqPreset = currentEqPreset + 1
 	}
-	sendCmd("/UIC?cmd=%3Cname%3ESet7bandEQMode%3C/name%3E" +
-    		"%3Cp%20type=%22dec%22%20name=%22presetindex%22%20val=%22${newEqPreset}%22/%3E")
+	Set7bandEQMode(newEqPreset)
 }
-def getEqPresetName() {
-	sendCmd("/UIC?cmd=%3Cname%3EGetCurrentEQMode%3C/name%3E")
-}
-//	----- SOUNDBAR STAUS FUNCTIONS -----
 def getPwr() {
 	if (getDataValue("hwType") == "HW-") {
-	sendCmd("/UIC?cmd=%3Cname%3EGetPowerStatus%3C/name%3E")
-    }
+		GetPowerStatus()
+	}
 }
-def getSource() {
-	sendCmd("/UIC?cmd=%3Cname%3EGetFunc%3C/name%3E")
+//	----- SPEAKER/SOUNDBAR CONTROL Commands to the Hardware
+def SetPowerStatus(powerStatus) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetPowerStatus%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22powerstatus%22%20val=%22${powerStatus}%22/%3E",
+			"generalResponse")
 }
-def getLevel() {
-	sendCmd("/UIC?cmd=%3Cname%3EGetVolume%3C/name%3E")
+def GetPowerStatus() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetPowerStatus%3C/name%3E",
+			"generalResponse")
 }
-def getMute() {
-	sendCmd("/UIC?cmd=%3Cname%3EGetMute%3C/name%3E")
+def SetVolume(deviceLevel) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetVolume%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22volume%22%20val=%22${deviceLevel}%22/%3E",
+			"generalResponse")
 }
-def getEQMode() {
-	sendCmd("/UIC?cmd=%3Cname%3EGetEQMode%3C/name%3E")
+def GetVolume() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetVolume%3C/name%3E",
+			"generalResponse")
 }
-//	----- PLAY/PAUSE -----
+def SetMute(mute) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetMute%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22mute%22%20val=%22${mute}%22/%3E",
+			"generalResponse")
+}
+def GetMute() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetMute%3C/name%3E",
+			"generalResponse")
+}
+def Get7BandEQList() {
+	sendCmd("/UIC?cmd=%3Cname%3EGet7BandEQList%3C/name%3E",
+			"generalResponse")	
+}
+def Set7bandEQMode(newEqPreset) {
+	sendCmd("/UIC?cmd=%3Cname%3ESet7bandEQMode%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22presetindex%22%20val=%22${newEqPreset}%22/%3E",
+			"generalResponse")
+}
+def GetCurrentEQMode() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetCurrentEQMode%3C/name%3E",
+			"generalResponse")
+}
+//	PLAYER CONTROL FUNCTIONS (play/pause, next, previous, shuffle, repeat)
 def play() {
 	playPause("resume", "play")
-    runIn(2, getPlayTime)
 }
 def pause() {
 	playPause("pause", "pause")
 	unschedule(setTrackDesciption)
+	runIn(1, getPlayStatus)
 }
 def playPause(uicStatus, cpmStatus) {
    def submode = getDataValue("submode")
 	switch(submode) {
 		case "dlna":
-			sendCmd("/UIC?cmd=%3Cname%3ESetPlaybackControl%3C/name%3E" +
-            		"%3Cp%20type=%22str%22%20name=%22playbackcontrol%22%20val=%22${uicStatus}%22/%3E")
+			uic_SetPlaybackControl(uicStatus)
 			break
 		case "cp":
-			sendCmd("/CPM?cmd=%3Cname%3ESetPlaybackControl%3C/name%3E" +
-            		"%3Cp%20type=%22str%22%20name=%22playbackcontrol%22%20val=%22${cpmStatus}%22/%3E")
+			cpm_SetPlaybackControl(cpmStatus)
 			break
 		default:
 			log.error "${device.label} Playback Control not valid for device or mode"
 		 	return
 	}
-    getPlayStatus()
+	runIn(1, getPlayStatus)
 }
 def getPlayStatus() {
 	def submode = getDataValue("submode")
 	switch(submode) {
 		case "dlna":
-			sendCmd("/UIC?cmd=%3Cname%3EGetPlayStatus%3C/name%3E")
+			uic_GetPlayStatus()
 			break
 		case "cp":
-			sendCmd("/CPM?cmd=%3Cname%3EGetPlayStatus%3C/name%3E")
+			cpm_GetPlayStatus()
 			break
 		default:
 			return
@@ -411,308 +429,471 @@ def getPlayStatus() {
 }
 //	----- PREVIOUS/NEXT -----
 def previousTrack() {
+	def submode = getDataValue("submode")
+	def cp = getDataValue("currentCp")
+	if (submode == "cp") {
+		if (cp != "Amazon" && cp != "AmazonPrime") {
+			log.info "${device.label}:   Previous Track does not work for this player"
+			return
+		}
+	}
 	trackChange("previous", "PreviousTrack")
 }
 def nextTrack() {
+	def submode = getDataValue("submode")
+	def cp = getDataValue("currentCp")
+	if (submode == "cp") {
+		if (cp != "Amazon" && cp != "AmazonPrime" && cp != "Pandora" && cp != "8tracks") {
+			log.info "${device.label}:   Next Track does not work for this player"
+			return
+		}
+	}
 	trackChange("next", "SkipCurrentTrack")
 }
 def trackChange(uicTrackChg, cpmTrackChg) {
 	def submode = getDataValue("submode")
 	switch(submode) {
 		case "dlna":
-			sendCmd("/UIC?cmd=%3Cname%3ESetTrickMode%3C/name%3E" +
-            		"%3Cp%20type=%22str%22%20name=%22trickmode%22%20val=%22${uicTrackChg}%22/%3E")
+			SetTrickMode(uicTrackChg)
 			break
 		case "cp":
-			sendCmd("/CPM?cmd=%3Cname%3ESet${cpmTrackChg}%3C/name%3E")
+			if (cpmTrackChg == "SkipCurrentTrack") {
+				SetSkipCurrentTrack()
+			} else {
+				SetPreviousTrack()
+				runIn(1, SetPreviousTrack)
+			}
 			break
 		default:
-			log.error "${device.label} Previous/Next not supported in current player"
+			log.info "${device.label}:   Previous/Next not supported."
 			return
 	}
-    runIn(2, setTrackDescription)
+	runIn(4, setTrackDescription)
 }
-//	Set the Marquee based on source and submode.
-def setTrackDescription() {
-	def submode = getDataValue("submode")
-    def source = device.currentValue("source")
-	unschedule(setTrackDesciption)
-    if (source != "wifi") {
-   	switch(source) {
-        	case "bt":
-            	sendEvent(name: "trackDescription", value: "Bluetooth")
-            	break
-            case "soundshare":
-            	sendEvent(name: "trackDescription", value: "TV Sound Connect")
-                break
-            case "aux":
-            	sendEvent(name: "trackDescription", value: "Auxiliary")
-            	break
-            case "optical":
-            	sendEvent(name: "trackDescription", value: "HDMI(ARC) or Optical")
-            	break
-            case "usb":
-            	sendEvent(name: "trackDescription", value: "USB")
-            	break
-            case "hdmi":
-            	sendEvent(name: "trackDescription", value: "HDMI")
-            	break
-            case "hdmi1":
-            	sendEvent(name: "trackDescription", value: "HDMI #1")
-            	break
-            case "hdmi2":
-            	sendEvent(name: "trackDescription", value: "HDMI #2")
-                break
-            default:
-            	sendEvent(name: "trackDescription", value: "Unknown Source")
-            	break
-        }
-	} else {
-		switch(submode) {
-			case "dlna":
-				sendCmd("/UIC?cmd=%3Cname%3EGetMusicInfo%3C/name%3E")
-				break
-			case "cp":
-				sendCmd("/CPM?cmd=%3Cname%3EGetRadioInfo%3C/name%3E")
-				break
-			case "device":
-				sendCmd("/UIC?cmd=%3Cname%3EGetAcmMode%3C/name%3E")
-				break
-			case "":
-			default:
-				sendEvent(name: "trackDescription", value: "Unknown WiFi")
-                break
-        }
-		runIn(2, getPlayTime)
-    }
-}
-
-def getPlayTime() {
-	if(device.currentValue("status") == "paused") {
-    	return
-    } else {
-		def currentCp = getDataValue("currentCp")
-		if (currentCp == "TuneIn" || currentCp == "iHeartRadio") {
-			log.info "${device.label} does not update TrackDescription for TuneIn nor iHeartRadio"
-			return
-		} else {
-			def submode = getDataValue("submode")
-			sendCmd("/UIC?cmd=%3Cname%3EGetCurrentPlayTime%3C/name%3E")
-	    }
-    }
-}
-def schedSetTrackDescription(playtime) {
-	def trackLength = getDataValue("tracklength").toInteger()
-	def nextUpdate = trackLength - playtime + 3
-    if (nextUpdate < 0) {
-    	log.error "${device.label} Next update value (${nextUpdate}) was negative!"
-    } else {
-		runIn(nextUpdate, setTrackDescription)
-		log.debug "${device.label} Track Description will update in ${nextUpdate} seconds"
-	}
-}
-def setLabels() {
-	switch(getDataValue("submode")) {
-		case "dlna":
-			sendEvent(name: "shuffle", value: "off")
-			sendEvent(name: "repeat", value: "off")
-            break
-		case "cp":
-        	if (getDataValue("currentCp") == "Amazon") {
-				sendEvent(name: "shuffle", value: "off")
-				sendEvent(name: "repeat", value: "off")
-            } else {
-				sendEvent(name: "shuffle", value: "inactive")
-				sendEvent(name: "repeat", value: "inactive")
-            }
-			break
-		default:
-			sendEvent(name: "shuffle", value: "inactive")
-			sendEvent(name: "repeat", value: "inactive")
-   }
-}
-//	----- SHUFFLE/REPEAT -----
 def toggleShuffle() {
 	def submode = getDataValue("submode")
-    def shuffleCmd = ""
+	def shuffleMode = ""
 	 switch(submode) {
 		case "dlna":
 			if (device.currentValue("shuffle") == "off") {
-            	shuffleCmd = "on"
+				shuffleMode = "on"
 			} else {
-            	shuffleCmd = "off"
+				shuffleMode = "off"
 			}
-			sendCmd("/UIC?cmd=%3Cname%3ESetShuffleMode%3C/name%3E" +
-            		"%3Cp%20type=%22str%22%20name=%22shufflemode%22%20val=%22${shuffleCmd}%22/%3E")
+			SetShuffleMode(shuffleMode)
 			break
 		case "cp":
 			if (device.currentValue("shuffle") == "off") {
-            	shuffleCmd = "1"
+				shuffleMode = "1"
 			} else {
-            	shuffleCmd = "0"
+				shuffleMode = "0"
 			}
-			sendCmd("/CPM?cmd=%3Cname%3ESetToggleShuffle%3C/name%3E" +
-            		"%3Cp%20type=%22dec%22%20name=%22mode%22%20val=%22${shuffleCmd}%22/%3E")
+			SetToggleShuffle(shuffleMode)
 			break
 		default:
-			log.error "${device.label} ShuffleMode not valid for device or mode"
+			log.info "${device.label}:   ShuffleMode not valid for device or mode"
 		 	return
 	}
 }
 def toggleRepeat() {
 	def submode = getDataValue("submode")
-    def repeatCmd = ""
+	def repeatMode = ""
 	 switch(submode) {
 		case "dlna":
 			if (device.currentValue("repeat") == "off") {
-            	repeatCmd = "one"
+				repeatMode = "one"
 			} else {
-            	repeatCmd = "off"
+				repeatMode = "off"
 			}
-			sendCmd("/UIC?cmd=%3Cname%3ESetRepeatMode%3C/name%3E" +
-            		"%3Cp%20type=%22str%22%20name=%22repeatmode%22%20val=%22${repeatCmd}%22/%3E")
+			uic_SetRepeatMode(repeatMode)
 			break
 		case "cp":
 			if (device.currentValue("repeat") == "off") {
-            	repeatCmd = "1"
+				repeatMode = "1"
 			} else {
-            	repeatCmd = "0"
+				repeatMode = "0"
 			}
-			sendCmd("/CPM?cmd=%3Cname%3ESetRepeatMode%3C/name%3E" +
-            		"%3Cp%20type=%22dec%22%20name=%22mode%22%20val=%22${repeatCmd}%22/%3E")
+			cpm_SetRepeatMode(repeatMode)
 			break
 		default:
 			log.error "${device.label} Repeat not valid for device or mode"
 		 	return
 	}
 }
-//	----- PRESET FUNCTIONS -----
-def preset1() {
-	playPreset(preset1Player, preset1Music)
+//	PLAYER CONTROL FUNCTIONS Hardware Commands
+def uic_SetPlaybackControl(playbackControl) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetPlaybackControl%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22playbackcontrol%22%20val=%22${playbackControl}%22/%3E",
+			"generalResponse")
 }
-def preset2() {
-	playPreset(preset2Player, preset2Music)
+def cpm_SetPlaybackControl(playbackControl) {
+	sendCmd("/CPM?cmd=%3Cname%3ESetPlaybackControl%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22playbackcontrol%22%20val=%22${playbackControl}%22/%3E",
+			"generalResponse")
 }
-def preset3() {
-	playPreset(preset3Player, preset3Music)
+def uic_GetPlayStatus() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetPlayStatus%3C/name%3E",
+			"generalResponse")
 }
-def preset4() {
-	playPreset(preset4Player, preset4Music)
+def cpm_GetPlayStatus() {
+	sendCmd("/CPM?cmd=%3Cname%3EGetPlayStatus%3C/name%3E",
+			"generalResponse")
 }
-def preset5() {
-	playPreset(preset5Player, preset5Music)
+def SetTrickMode(trickMode) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetTrickMode%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22trickmode%22%20val=%22${trickMode}%22/%3E",
+			"generalResponse")
 }
-def preset6() {
-	playPreset(preset6Player, preset6Music)
+def SetPreviousTrack() {
+	sendCmd("/CPM?cmd=%3Cname%3ESetPreviousTrack%3C/name%3E",
+			"generalResponse")
 }
-def preset7() {
-	playPreset(preset7Player, preset7Music)
+def SetSkipCurrentTrack() {
+	sendCmd("/CPM?cmd=%3Cname%3ESetSkipCurrentTrack%3C/name%3E",
+			"generalResponse")
 }
-def preset8() {
-	playPreset(preset8Player, preset8Music)
+def SetShuffleMode(shuffleMode) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetShuffleMode%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22shufflemode%22%20val=%22${shuffleMode}%22/%3E",
+			"generalResponse")
 }
-def playPreset(player, music) {
-//	log.debug "${device.label} starting preset with player = ${player} and music = ${music}"
-	updateDataValue("currentPlayer", "${player}")
-    updateDataValue("currentMusic", "${music}")
-	if (player == "Amazon Playlist") {
-		sendCmd("/CPM?cmd=%3Cname%3ESetSelectAmazonCp%3C/name%3E")
-	} else if (player == "Amazon Station") {
-		sendCmd("/CPM?cmd=%3Cname%3ESetCpService%3C/name%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22cpservice_id%22%20val%3D%2224%22/%3E")
-	} else if (player == "TuneIn") {
-		sendCmd("/CPM?cmd=%3Cname%3ESetSelectRadio%3C/name%3E")
-	} else if (player == "iHeartRadio") {		
-		sendCmd("/CPM?cmd=%3Cname%3ESetCpService%3C/name%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22cpservice_id%22%20val%3D%225%22/%3E")
-	} else if (player == "Pandora") {
-		sendCmd("/CPM?cmd=%3Cname%3ESetCpService%3C/name%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22cpservice_id%22%20val%3D%220%22/%3E")
+def SetToggleShuffle(mode) {
+	sendCmd("/CPM?cmd=%3Cname%3ESetToggleShuffle%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22mode%22%20val=%22${mode}%22/%3E",
+			"generalResponse")
+}
+def uic_SetRepeatMode(repeatMode) {
+	sendCmd("/UIC?cmd=%3Cname%3ESetRepeatMode%3C/name%3E" +
+			"%3Cp%20type=%22str%22%20name=%22repeatmode%22%20val=%22${repeatMode}%22/%3E",
+			"generalResponse")
+}
+def cpm_SetRepeatMode(mode) {
+	sendCmd("/CPM?cmd=%3Cname%3ESetRepeatMode%3C/name%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22mode%22%20val=%22${mode}%22/%3E",
+			"generalResponse")
+}
+//	----- PLAYER INFORMATION METHODS
+def setTrackDescription() {
+	def submode = getDataValue("submode")
+	def source = getDataValue("source")
+	unschedule(setTrackDesciption)
+	if (source != "wifi") {
+   		switch(source) {
+			case "bt":
+				sendEvent(name: "trackDescription", value: "Bluetooth")
+				break
+			case "soundshare":
+				sendEvent(name: "trackDescription", value: "TV Sound Connect")
+				break
+			case "aux":
+				sendEvent(name: "trackDescription", value: "Auxiliary")
+				break
+			case "optical":
+				sendEvent(name: "trackDescription", value: "HDMI(ARC) or Optical")
+				break
+			case "usb":
+				sendEvent(name: "trackDescription", value: "USB")
+				break
+			case "hdmi":
+				sendEvent(name: "trackDescription", value: "HDMI")
+				break
+			case "hdmi1":
+				sendEvent(name: "trackDescription", value: "HDMI #1")
+				break
+			case "hdmi2":
+				sendEvent(name: "trackDescription", value: "HDMI #2")
+				break
+			default:
+				sendEvent(name: "trackDescription", value: "Unknown Source")
+				break
+		}
 	} else {
-		log.error "${device.label} failed to set CP in playPreset."
+		switch(submode) {
+			case "dlna":
+			//	use default "WiFi" until DLNA Functions are tested.
+				sendEvent(name: "trackDescription", value: "WiFi (DLNA)")
+				GetMusicInfo()
+				break
+			case "cp":
+				GetRadioInfo("generalResponse")
+				break
+			case "device":
+				sendEvent(name: "trackDescription", value: "WiFi (ACM)")
+				GetAcmMode()
+				break
+			case "":
+			default:
+				sendEvent(name: "trackDescription", value: "WiFi (Unknown)")
+				break
+		}
 	}
 }
-def selectSubmenu() {
-	def player = getDataValue("currentPlayer")
-    def contentId = ""
-	if (player == "Amazon Playlist") {
-		contentId = "1"
-	} else if (player == "Amazon Station") {
-    	contentId = "2"
-	} else if (player == "iHeartRadio") {
-    	contentId = "1"
-	} else if (player == "TuneIn") {
-		sendCmd("/CPM?cmd=%3Cname%3EGetPresetList%3C/name%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22startindex%22%20val%3D%220%22/%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22listcount%22%20val%3D%2210%22/%3E")
-        return
-	} else if (player == "Pandora") {
-		sendCmd("/CPM?cmd=%3Cname%3EGetCurrentRadioList%3C/name%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22startindex%22%20val%3D%220%22/%3E" +
-				"%3Cp%20type%3D%22dec%22%20name%3D%22listcount%22%20val%3D%2299%22/%3E")
-        return
+def getPlayTime() {
+	def update = getDataValue("updateTrackDescription")
+	def playStatus = device.currentValue("status")
+	if(playStatus == "paused" || update == "no") {
+		log.info "${device.label}:   schedSetTrackDescription not invoked"
+		return
 	} else {
-		log.error "${device.label} failed to set Submenu in selectSubmenu."
-    	return
-    }
+		GetCurrentPlayTime()
+	}
+}
+def schedSetTrackDescription(playtime) {
+	if (getDataValue("trackLength") == "") {
+		setDataValue("trackLength", "0")
+	}
+	def trackLength = getDataValue("tracklength").toInteger()
+	def nextUpdate = trackLength - playtime + 3
+	if (nextUpdate < 0) {
+		log.error "${device.label} Next update value (${nextUpdate}) was negative!"
+		sendEvent(name: "#### ERROR ####", value: "schedSetTrackDescription nextUpdate value is negative")
+		} else {
+		runIn(nextUpdate, setTrackDescription)
+		log.info "${device.label}:   Track Description will update in ${nextUpdate} seconds"
+	}
+}
+//	----- PLAYER INFORMATION HW Commands
+def GetMusicInfo() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetMusicInfo%3C/name%3E",
+			"generalResponse")
+}
+def GetRadioInfo(action) {
+	sendCmd("/CPM?cmd=%3Cname%3EGetRadioInfo%3C/name%3E",
+			action)}
+def GetAcmMode() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetAcmMode%3C/name%3E",
+			"generalResponse")
+}
+def GetCurrentPlayTime() {
+	sendCmd("/UIC?cmd=%3Cname%3EGetCurrentPlayTime%3C/name%3E",
+			"generalResponse")
+}
+//	----- PLAY PRESET FUNCTIONS -----
+/*	
+	Note:  Preset implementation is designed as follows:
+	a.	AmazonPrime limited to "paths"
+		1)	Playlists
+		2)	My Music  ==>> Playlists.
+	b.	Amazon limited to path Playlists.
+	c.	iHeartRadio limited to path Favorites
+	Other players tested are Pandora, 8tracks and TuneIn;
+	however, others may work using the programmed default.
+*/
+def preset_1() {
+	updateDataValue("currentPreset", "preset_1")
+	presetDirector("preset_1")
+}
+def preset_2() {
+	updateDataValue("currentPreset", "preset_2")
+	presetDirector("preset_2")
+}
+def preset_3() {
+	updateDataValue("currentPreset", "preset_3")
+	presetDirector("preset_3")
+}
+def preset_4() {
+	updateDataValue("currentPreset", "preset_4")
+	presetDirector("preset_4")
+}
+def preset_5() {
+	updateDataValue("currentPreset", "preset_5")
+	presetDirector("preset_5")
+}
+def preset_6() {
+	updateDataValue("currentPreset", "preset_6")
+	presetDirector("preset_6")
+}
+def preset_7() {
+	updateDataValue("currentPreset", "preset_7")
+	presetDirector("preset_7")
+}
+def preset_8() {
+	updateDataValue("currentPreset", "preset_8")
+	presetDirector("preset_8")
+}
+def presetDirector(preset) {
+	def presetState = device.currentValue(preset)
+	def vacantText = getDataValue("vacantPresetTxt")
+	def presetArmedText = getDataValue("addPresetArmedTxt")
+	def deletePresetState = device.currentValue("deletePresetState")
+	if (deletePresetState == "armed") {
+		prepareToDeletePS(preset)
+	} else if (presetState == vacantText) {
+		armAddPreset(preset, vacantText, presetArmedText)
+	} else if (presetState == presetArmedText) {
+		addPreset(preset)
+	} else {
+		def cp = getDataValue("${preset}_Cp")
+		def path = getDataValue("${preset}_Path")
+		def title = getDataValue("${preset}_Title")
+		playPreset(cp, path, title)
+	}
+}
+def playPreset(cp, path, title) {
+	updateDataValue("currentCp", "${cp}")
+	updateDataValue("currentPath", "${path}")
+	updateDataValue("currentTitle", "${title}")
+	switch(cp) {
+		case "Amazon":
+			SetSelectAmazonCp("generalResponse")
+			break
+		case "AmazonPrime":
+			SetCpService("24", "generalResponse")
+			break
+		case "iHeartRadio":
+			SetCpService("5", "generalResponse")
+				break
+		case "Pandora":
+			SetCpService("0", "generalResponse")
+			break
+		case "8tracks":
+			SetCpService("4", "generalResponse")
+			break
+		case "TuneIn":
+			SetSelectRadio("generalResponse")
+			break
+		default:
+			PlayById(cp, path, "startTitle")
+	}
+}
+//	----- ADD PRESET FUNCTIONS -----
+def armAddPreset(preset, vacantText, presetArmedText) {
+	sendEvent(name: preset, value: presetArmedText)
+	runIn(10, cancelPresetUpdate, [data: [preset: preset]])
+}
+def addPreset(preset) {
+	sendEvent(name: preset, value: "updating")
+	GetRadioInfo("addPresetParse")
+}
+def createPreset(cp, path, title) {
+	def preset = getDataValue("currentPreset")		
+	updateDataValue("${preset}_Cp", "${cp}")
+	updateDataValue("${preset}_Path", "${path}")
+	updateDataValue("${preset}_Title", "${title}")
+	sendEvent(name: preset, value: "${cp}\n\r${title}")
+}
+def cancelPresetUpdate(data) {
+	def preset = data.preset
+	def presetState = device.currentValue(preset)
+	def vacantText = getDataValue("vacantPresetTxt")
+	def presetArmedText = getDataValue("addPresetArmedTxt")
+	if (presetState == presetArmedText) {
+		updateDataValue("${preset}_Cp", "")
+		updateDataValue("${preset}_Path", "")
+		updateDataValue("${preset}_Title", vacantText)
+		sendEvent(name: preset, value: vacantText)
+	}
+}
+//	===== DELETE PRESET FUNCTIONS -----
+def deletePreset() {
+	sendEvent(name: "deletePresetState", value: "armed")
+	runIn(10, stopDeletePreset)
+}
+def prepareToDeletePS(preset) {
+	sendEvent(name: "deletePresetState", value: "PRESS TO DELETE\n\r${preset}")
+	runIn(10, stopDeletePreset)
+}
+def finishDeletePreset() {
+	unschedule(stopDeletePreset)
+	def preset = getDataValue("currentPreset")
+	def vacantText = getDataValue("vacantPresetTxt")
+	sendEvent(name: "deletePresetState", value: "inactive")
+	updateDataValue("${preset}_Cp", "")
+	updateDataValue("${preset}_Path", "")
+	updateDataValue("${preset}_Title", vacantText)
+	sendEvent(name: preset, value: vacantText)
+}
+def stopDeletePreset(){
+//	Abort by pressing Delete a second time w/o selecting a preset.
+	sendEvent(name: "deletePresetState", value: "inactive")
+}
+//	----- PRESET FUNCTIONS Hardware Commands
+def SetSelectAmazonCp(action) {
+	sendCmd("/CPM?cmd=%3Cname%3ESetSelectAmazonCp%3C/name%3E",
+			action)
+}
+def SetCpService(cpId, action){
+	sendCmd("/CPM?cmd=%3Cname%3ESetCpService%3C/name%3E" +
+			"%3Cp%20type%3D%22dec%22%20name%3D%22cpservice_id%22%20val%3D%22${cpId}%22/%3E",
+			action)
+}
+def SetSelectRadio(action) {
+	sendCmd("/CPM?cmd=%3Cname%3ESetSelectRadio%3C/name%3E",
+			action)
+}
+def PlayById(player, mediaId, action) {
+	sendCmd("/CPM?cmd=%3Cname%3EPlayById%3C/name%3E" +
+		"%3Cp%20type=%22str%22%20name=%22cpname%22%20val=%22${player}%22/%3E" +
+		"%3Cp%20type=%22str%22%20name=%22mediaid%22%20val=%22${mediaId}%22/%3E",
+		action)
+}
+def SetSelectCpSubmenu(contentId, action){
 	sendCmd("/CPM?cmd=%3Cname%3ESetSelectCpSubmenu%3C/name%3E" +
 			"%3Cp%20type%3D%22dec%22%20name%3D%22contentid%22%20val%3D%22${contentId}%22/%3E" +
 			"%3Cp%20type%3D%22dec%22%20name%3D%22startindex%22%20val%3D%220%22/%3E" +
-			"%3Cp%20type%3D%22dec%22%20name%3D%22listcount%22%20val%3D%2230%22/%3E")
+			"%3Cp%20type%3D%22dec%22%20name%3D%22listcount%22%20val%3D%2230%22/%3E",
+			action)
 }
-def selectRadioList(contentId) {
+def GetSelectRadioList(contentId, action) {
 	sendCmd("/CPM?cmd=%3Cname%3EGetSelectRadioList%3C/name%3E" +
-    		"%3Cp%20type=%22dec%22%20name=%22contentid%22%20val=%22${contentId}%22/%3E" +
-            "%3Cp%20type=%22dec%22%20name=%22startindex%22%20val=%220%22/%3E" +
-            "%3Cp%20type=%22dec%22%20name=%22listcount%22%20val=%2230%22/%3E")
+			"%3Cp%20type=%22dec%22%20name=%22contentid%22%20val=%22${contentId}%22/%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22startindex%22%20val=%220%22/%3E" +
+			"%3Cp%20type=%22dec%22%20name=%22listcount%22%20val=%2230%22/%3E",
+			action)
 }
-def SetPlaySelect(contentId) {
-//	log.debug "${device.label} At SetPlaySelect with contentId = ${contentId}"
+def GetCurrentRadioList(action) {
+	sendCmd("/CPM?cmd=%3Cname%3EGetCurrentRadioList%3C/name%3E" +
+			"%3Cp%20type%3D%22dec%22%20name%3D%22startindex%22%20val%3D%220%22/%3E" +
+			"%3Cp%20type%3D%22dec%22%20name%3D%22listcount%22%20val%3D%2299%22/%3E",
+			action)
+}
+def SetPlaySelect(contentId, action) {
 	sendCmd("/CPM?cmd=%3Cname%3ESetPlaySelect%3C/name%3E" +
-			"%3Cp%20type=%22dec%22%20name=%22selectitemid%22%20val=%22${contentId}%22/%3E")
-	log.info "${device.label} Playing preset ${getDataValue("currentMusic")} on ${getDataValue("currentPlayer")}"
-    runIn(5, getSource)
+			"%3Cp%20type=%22dec%22%20name=%22selectitemid%22%20val=%22${contentId}%22/%3E",
+			action)
 }
-def SetPlayPreset(contentId) {
-//	log.debug "${device.label} At SetPlayPreset with contentId = ${contentId}"
-	sendCmd("/CPM?cmd=%3Cname%3ESetPlayPreset%3C/name%3E" +
-			"%3Cp%20type%3D%22dec%22%20name%3D%22presetindex%22%20val%3D%22${contentId}%22/%3E" +
-			"%3Cp%20type%3D%22dec%22%20name%3D%22presettype%22%20val%3D%221%22/%3E")
-	log.info "${device.label} Playing preset ${getDataValue("currentMusic")} on ${getDataValue("currentPlayer")}"
-	runIn(5, getSource)
+//	----- UTILITY FUNCTIONS
+def setLabels() {
+	def currentCp = getDataValue("currentCp")
+	switch(getDataValue("submode")) {
+		case "dlna":
+			sendEvent(name: "shuffle", value: "off")
+			sendEvent(name: "repeat", value: "off")
+			break
+		case "cp":
+			if (currentCp == "Amazon" || currentCp == "AmazonPrime") {
+				sendEvent(name: "shuffle", value: "off")
+				sendEvent(name: "repeat", value: "off")
+			} else {
+				sendEvent(name: "shuffle", value: "inactive")
+				sendEvent(name: "repeat", value: "inactive")
+			}
+			break
+		default:
+			sendEvent(name: "shuffle", value: "inactive")
+			sendEvent(name: "repeat", value: "inactive")
+   }
 }
-//	----- TURN SHUFFLE/REPEAT CAPABILITY ON AND OFF -----
+//	Null command for when tile is "insctive".
 def inactive() {
-	log.error "${device.label} The specific tile is not active due to mode of player."
+	log.info "${device.label}:  The specific tile is not active due to mode of player."
 }
 /*
 	Refresh is used to update the display when music is started
 	the multiroom app.  It can also be used if an out-of-sync
-	condition is encountered due to some timing issue.
+	condition is encountered due to some timing issue.  The
+	function getPwr is delayed to properly se the marquee of power
+	is off (soundbar only).
 */
 def refresh() {
-	getSource()
-    getLevel()
-	runIn(1, getPlayStatus)
-    runIn(1, getMute)
-    runIn(2, setLabels)
-    runIn(2, getEqPresetName)
-    runIn(3, getPwr)
-    runIn(3, setTrackDescription)
-}
-/*
-	If an unplanned Method is returned from the device, it could
-	mask the desired Method.  The purpose of this (invalic)
-	command is to cause any buffered method to be transmitted
-	for parsing.
-*/
-def getMore() {
-//log.debug "EXECUTED getMore"
-	sendCmd("/UIC?cmd=%3Cname%3EGetMore%3C/name%3E")
+	GetFunc()
+	GetVolume()
+	GetCurrentEQMode()
+	getPlayStatus()
+	getPwr()
 }
 //	----- SEND COMMAND TO SOUNDBAR -----
-private sendCmd(command){
-//	log.debug command
+private sendCmd(command, action){
 	def cmdStr = new physicalgraph.device.HubAction([
 		method: "GET",
 		path: command,
@@ -720,42 +901,38 @@ private sendCmd(command){
 			HOST: "${deviceIP}:55001"
 		]],
 		null,
-		[callback: parseResponse]
+		[callback: action]
 	)
 	sendHubCommand(cmdStr)
 }
-//	----- PARSE RESPONSE DATA BASED ON METHOD -----
-/*
-	Parsing will be of the returned methods from the device.
-	The device sends these responses asynchronously; therefore,
-	some timing issues and missed responses may occur.
-*/
-void parseResponse(resp) {
+//	----- PARSE RESPONSE DATA BASED ON METHOD -----	
+def generalResponse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse generalResponse:  method: ${respMethod}."
 	switch(respMethod) {
 //	----- SOUNDBAR STATUS METHODS -----
 		case "PowerStatus":
-        	if (respData.powerStatus == "1") {
-            	sendEvent(name: "switch", value: "on")
-                sendEvent(name: "mute", value: "unmuted")
-            } else {
-            	sendEvent(name: "switch", value: "off")
-            }
+			def newStatus = respData.powerStatus
+			if (device.currentValue("status") != newStatus) {
+				sendEvent(name: "switch", value: newStatus)
+			}
 			break
 		case "CurrentFunc":
-			sendEvent(name: "source", value: respData.function)
-            updateDataValue("submode", "${respData.submode}")
-			log.info "${device.label} Source = ${device.currentValue("source")}, Submode = ${getDataValue("submode")}"
-            getPlayStatus()
-            runIn(1, setTrackDescription)
+			if (respData.function != getDataValue("source") || respData.submode != getDataValue("submode")) {
+				updateDataValue("source", "${respData.function}")
+				updateDataValue("submode", "${respData.submode}")
+			}
+			setLabels()
+			runIn(4, setTrackDescription)
 			break
 		case "VolumeLevel":
-        	def scale = getDataValue("volScale").toInteger()
-        	def level = respData.volume.toInteger()
-        	level = Math.round(100*level/scale).toInteger()
-			sendEvent(name: "level", value: level)
-//			log.debug "${device.label} Volume set to ${device.currentValue("level")}"
+			def scale = getDataValue("volScale").toInteger()
+			def level = respData.volume.toInteger()
+			level = Math.round(100*level/scale).toInteger()
+			if (level != device.currentValue("level")) {
+				sendEvent(name: "level", value: level)
+			}
 			break
 		case "MuteStatus":
 			if (respData.mute == "on") {
@@ -763,33 +940,35 @@ void parseResponse(resp) {
 			} else {
 				sendEvent(name: "mute", value: "unmuted")
 			}
-//			log.debug "${device.label} Device Mute is set to ${device.currentValue("mute")}"
 	   		break
 		case "7BandEQList":
 			cmdEqPreset(respData.listcount.toString())
 			break
-        case "EQMode":
-        case "EQDrc":
-			getEqPresetName()
-        	break
-        case "7bandEQMode":
-        case "CurrentEQMode":
+		case "EQMode":
+		case "EQDrc":
+			GetCurrentEQMode()
+			break
+		case "7bandEQMode":
+		case "CurrentEQMode":
 			sendEvent(name: "eqPreset", value: respData.presetname)
 			updateDataValue("currentEqPreset", "${respData.presetindex}")
-//			log.info "${device.label} Equalizer Preset now ${device.currentValue("eqPreset")}"
-            break
+			break
 		case "RearLevel":
-	   	sendEvent(name: "rearLevel", value: respData.level)
-//			log.debug "${device.label} Rear Level is at ${device.currentValue("rearLevel")}."
+		   	updateDataValue("rearLevel", "${respData.level}")
 			break
 //	----- MEDIA CONTROL STATUS METHODS -----
 		case "PlayStatus":
 		case "PlaybackStatus":
 			if (respData.playstatus == "play") {
-				sendEvent(name: "status", value: "playing")
+				if (device.currentValue("status") != "playing") {
+					sendEvent(name: "status", value: "playing")
+					return getPlayTime()
+				}
 			} else if (respData.playstatus == "stop" || "pause" || "paused") {
-				sendEvent(name: "status", value: "paused")
-		   }
+				if (device.currentValue("status") != "paused") {
+					sendEvent(name: "status", value: "paused")
+				}
+			}
 			break
 		case "RepeatMode":
 			def submode = getDataValue("submode")
@@ -817,121 +996,243 @@ void parseResponse(resp) {
 				sendEvent(name: "shuffle", value: "off")
 			}
 			break
-//	----- METHODS TO UPDATE TRACK DESCRIPTION -----
+//	----- MUSIC INFORMATION METHODS
 		case "MusicInfo":
 			sendEvent(name: "trackDescription", value: "${respData.title}\n${respData.artist}")
 			updateDataValue("currentCp", "")
-//			log.debug "${device.label} trackDescription set to ${device.currentValue("trackDescription")}"
-            break
-		case "RadioInfo":
-        	if (respData.cpname == "TuneIn" || respData.cpname == "iHeartRadio") {
-				sendEvent(name: "trackDescription", value: respData.title)
-            } else {
-				sendEvent(name: "trackDescription", value: "${respData.artist}\n${respData.title}")
-            }
-			updateDataValue("currentCp", "${respData.cpname}")
-            updateDataValue("currentMusic", "${respData.title}")
-//			log.debug "${device.label} trackDescription set to ${device.currentValue("trackDescription")}"
-			if (respData.tracklength != "" && respData.tracklength.toInteger() > 1) {
-				updateDataValue("tracklength", "${respData.tracklength}")
-			}
+			updateDataValue("updateTrackDescription", "yes")
+			return getPlayTime()
 			break
+		case "RadioInfo":
+			def cp = respData.cpname
+			if (cp == "Pandora" && respData.tracklength == "0") {
+			//	Special code to handle Pandora Commercials (reported at 0 length)
+			   	sendEvent(name: "trackDescription", value: "Pandora\n\rCommercial")
+				updateDataValue("tracklength", "30")
+				updateDataValue("updateTrackDescription", "yes")
+				return getPlayTime()
+			} else if (cp == "Amazon" || cp == "AmazonPrime" || cp == "Pandora" || cp == "8tracks") {
+				def trkDesc = "${cp}\n\r${respData.artist}\n\r${respData.title}"
+				if (trkDesc == device.currentValue("trackDescription")) {
+					return
+				}
+			   	sendEvent(name: "trackDescription", value: trkDesc)
+				updateDataValue("tracklength", "${respData.tracklength}")
+				updateDataValue("updateTrackDescription", "yes")
+				return getPlayTime()
+			} else {
+				 if (respData.title == device.currentValue("trackDescription")) {
+					return
+				}
+			   	sendEvent(name: "trackDescription", value: respData.title)
+				updateDataValue("updateTrackDescription", "no")
+				updateDataValue("tracklength", "0")
+			}
+ 			break
 		case "AcmMode":
+			if (respData.audiosourcename == device.currentValue("trackDescription")) {
+				return
+			}
 			sendEvent(name: "trackDescription", value: respData.audiosourcename)
-//			log.debug "${device.label} trackDescription set to ${device.currentValue("trackDescription")}"
+			updateDataValue("currentCp", "")
+			updateDataValue("updateTrackDescription", "no")
 			break
 		case "MusicPlayTime":
 			if (getDataValue("submode") == "dlna") {
 				updateDataValue("tracklength", "${respData.timelength}")
 			}
-            if (respData.playtime != ""){
-	            schedSetTrackDescription(respData.playtime.toInteger())
-            }
+			if (respData.playtime != ""){
+				return schedSetTrackDescription(respData.playtime.toInteger())
+			}
 			break
-//	----- TUNE PRESET METHODS -----
+//	----- PLAY PRESET METHODS
+		case "SelectCpService":
 		case "CpChanged":
-		case "RadioSelected":
-		case "AmazonCpSelected":
-//			log.debug "${device.label} currentCp changed to ${respData.cpname}"
-			updateDataValue("currentCp", "${respData.cpname}")
-            setLabels()
-            selectSubmenu()
-			break
-		case "RadioList":
-			def contentId = ""
-			def music = getDataValue("currentMusic")
-//			log.debug "${device.label} At parse RadioList with music = ${music}"
-			def menuItems = respData.menulist.menuitem
-           if (getDataValue("currentPlayer") == "Amazon Playlist" && respData.category == music) {
-            	SetPlaySelect("0")
-            } else {
-				menuItems.each {
-					if (contentId == "") {
-						if (it.title == music) {
-							contentId = it.contentid
-						}
-					}
-                }
-                if (getDataValue("currentPlayer") == "Amazon Playlist") {
-					selectRadioList(contentId)
-                } else {
-					SetPlaySelect(contentId)
-                }
-			}
-			break
-		case "PresetList":
-			def contentId = ""
-			def presets = respData.presetlist.preset
-			def music = getDataValue("currentMusic")
-//			log.debug "${device.label} At parse PresetList with music = ${music}"
-			presets.each {
-				if (contentId == "") {
-					if (it.title == music) {
-						contentId = it.contentid
-						SetPlayPreset(contentId)
-					}
+			def cp = respData.cpname
+			updateDataValue("currentCp", "${cp}")
+			def path = getDataValue("currentPath")
+			if (cp == "AmazonPrime") {
+				if (path == "Playlists") {
+					SetSelectCpSubmenu(1, "searchRadioList")
+				} else if (path == "Prime Stations") {
+					SetSelectCpSubmenu(2, "searchRadioList")
+				} else if (path == "My Music") {
+ 					SetSelectCpSubmenu(6, "searchRadioList")
 				}
-		   }
-			if (contentId == "") {
-				log.error "${device.label} The TuneIn preset title is not valid"
+			} else if (cp == "iHeartRadio") {
+					SetSelectCpSubmenu(1, "searchRadioList")
+			} else if (cp == "Pandora") {
+					GetCurrentRadioList("searchRadioList")
+			} else if (cp == "8tracks") {
+					PlayById(cp, path, "startTitle")
+			} else {
+				log.error "${device.label}:  Invalid Path in generalResponse CpChanged"
+				sendEvent(name: "#### ERROR ####", value: "Invalid Path in generalResponse CpChanged")
 			}
+			setLabels()
 			break
-        case "SoftwareVersion":
-        	def model = respData.version.toString()
-            updateDataValue("model", "${model}")
-            def hwType = model.substring(0,3)
-            updateDataValue("hwType", "${hwType}")
+		case "RadioSelected":
+			def cp = respData.cpname
+			def path = getDataValue("currentPath")
+			updateDataValue("currentCp", "${cp}")
+			PlayById(cp, path, "startTuneIn")
+			setLabels()
+			break
+		case "AmazonCpSelected":
+			updateDataValue("currentCp", "${respData.cpname}")
+			SetSelectCpSubmenu(1, "searchRadioList")
+			setLabels()
+			break
+		case "SoftwareVersion":
+			def model = respData.version.toString()
+			updateDataValue("model", "${model}")
+			def hwType = model.substring(0,3)
+			updateDataValue("hwType", "${hwType}")
 			if (hwType == "WAM") {
 				updateDataValue("volScale", "30")
-                sendEvent(name: "switch", value: "inactive")
-		    } else {
+				sendEvent(name: "switch", value: "inactive")
+			} else {
 				updateDataValue("volScale", "100")
-                sendEvent(name: "switch", value: "on")
-		    }
-			log.info "${device.label} Updated device Model and Volume Scale"
+				sendEvent(name: "switch", value: "on")
+			}
 			break
-        case "StartPlaybackEvent":
-        case "MediaBufferStartEvent":
-				sendEvent(name: "status", value: "playing")
-                getMore()
-        	break
+		case "RadioList":
+			log.error "Important method ${respMethod} ignored."
+		case "SkipInfo":
+		case "ErrorEvent":
+			log.error "${device.label}:  Speaker Error: ${respData}"
+			sendEvent(name: "#### ERROR ####", value: respData)
+			break
+//		case "SelectCpService":
+		case "StartPlaybackEvent":
+		case "MediaBufferStartEvent":
 		case "StopPlaybackEvent":
 		case "EndPlaybackEvent":
 		case "MediaBufferEndEvent":
 		case "PausePlaybackEvent":
-//			sendEvent(name: "status", value: "pause")
-//        	break
-        case "MusicList":
-        case "RequestDeviceInfo":
-        case "MultiQueueList":
-        case "RadioPlayList":
-        case "ManualSpeakerUpgrade":
-        	getMore()
-	        log.info "${device.label} Intentional ignore of parse method ${respMethod}"
-            break
+		case "MusicList":
+		case "RequestDeviceInfo":
+		case "MultiQueueList":
+		case "RadioPlayList":
+		case "CpList":
+		case "DmsList":
+		case "ManualSpeakerUpgrade":
+		   break
  		default:
-            getMore()
-	        log.info "${device.label} New parse method:  ${respMethod} with data ${respData}"
-        	break
+			log.error "UNPROGRAMMED METHOD:   ${respMethod} with data ${respData}"
+			break
 	}
+}
+//	----- SPECIAL CASE PARSE FUNCTIONS
+//	When starting play, a StopPlaybackEvent is sent
+//	This will start the follow-on activities.
+def searchRadioList(resp) {
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse searchRadioList:  method: ${respMethod}."
+	def contentId = ""
+	def cp = respData.cpname
+	def title = getDataValue("currentTitle")
+	def path = getDataValue("currentPath")
+	if (cp == "AmazonPrime" && respData.root == "My Music" && respData.category.@isroot == "1") {
+		return GetSelectRadioList("0", "searchRadioList")
+	}
+	def menuItems = respData.menulist.menuitem
+	menuItems.each {
+		if (contentId == "") {
+			if (it.title == title) {
+				contentId = it.contentid
+			}
+		}
+	}
+	if (contentId == "") {
+		log.error "${device.label}:   Invalid Preset Title in provided Path in parse searchRadioList"
+		return
+	}
+	switch(cp) {
+		case "iHeartRadio":
+		case "Pandora":
+			SetPlaySelect(contentId, "startTitle")
+			break
+		case "Amazon":
+			GetSelectRadioList(contentId, "titleSelected")
+			break
+		case "AmazonPrime":
+			if (path == "Playlists" || path == "My Music") {
+				GetSelectRadioList(contentId, "titleSelected")
+			} else {
+				log.error "${device.label}:   Invalid Amazon Prime selection in searchRadioList"
+			}
+			break
+		default:
+			log.error "${device.label}:   Invalid information in parse searchRadioList"
+	}
+}
+def titleSelected(resp) {
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse titleSelected:  method: ${respMethod}."
+	return SetPlaySelect("0", "startTitle")
+}
+def startTitle(resp) {
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse startTitle:  method: ${respMethod}."
+//	runIn(4, play)
+	GetFunc()
+}
+def startTuneIn(resp) {
+//	Special since TuneIn takes too long to load into player.
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse startTuneIn:  method: ${respMethod}."
+	runIn(5, play)
+	runIn(6, GetFunc)
+}
+private addPresetParse(resp) {
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.trace "At parse addPresetParse:  method: ${respMethod}."
+	def cp = respData.cpname
+	def path = ""
+	def title = ""
+	if (respMethod == "RadioInfo") {
+		switch(cp) {
+			case "Amazon":
+			case "AmazonPrime":
+				return GetCurrentRadioList("addPresetParse")
+				break
+			case "iHeartRadio":
+				path = "Favorites"
+				title = respData.title
+				break
+			case "Pandora":
+				title = respData.station
+				break
+			case "8tracks":
+				path = respData.mediaid
+				title = respData.mixname
+				break
+			default:
+			//	default currently tested for 'TuneIn' only.
+			 	path = respData.mediaid
+				title = respData.title
+		}
+		createPreset(cp, path, title)
+	} else if (respMethod == "RadioList") {
+		path = respData.root
+		title = respData.category
+		createPreset(cp, path, title)
+	} else {
+		log.error "addPresetParse ignored method ${respMethod}"
+	}
+}
+//	Capture spurious data sent to hub from device
+def parse(String description) {
+	def resp = parseLanMessage(description)
+	def respMethod = (new XmlSlurper().parseText(resp.body)).method
+	def respData = (new XmlSlurper().parseText(resp.body)).response
+	log.error "At parse PARSE:  method: ${respMethod}."
+	sendEvent(name: "#### ERROR ####", value: "Return Data sent to parse for method ${respMethod}.")
+	generalResponse(resp)
 }

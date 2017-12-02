@@ -22,7 +22,7 @@ definition(
 	name: "Samsung WiFi Speaker SM (unofficial)",
 	namespace: "djg",
 	author: "Dave Gutheinz",
-	description: "This is a Service Manager for the TP-Link PC Bridge and TP-Link devices",
+	description: "This is a Service Manager for Samsung WiFi speakers and soundbars.",
 	category: "SmartThings Labs",
 	iconUrl: "https://www.samsung.com/us/smg/content/dam/IconLibrary/RingRadiatorTechnology.svg",
 	iconX2Url: "https://www.samsung.com/us/smg/content/dam/IconLibrary/RingRadiatorTechnology.svg",

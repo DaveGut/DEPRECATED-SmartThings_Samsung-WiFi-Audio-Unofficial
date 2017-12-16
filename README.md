@@ -4,10 +4,23 @@
 
 This device handler controls a stand-alone Samsung WiFi soundbar or speaker.  It has been tested on the Samsung HS-MS650 Soundbar and the R1 Speaker.  It is expected to run on any of the Samsung Multiroom compatible speakers.  If not, I will work to upgrade.
 
-# Latest Update - 12-1
+# Latest Update - 12-16
 
-Added multi-speaker functions to add/delete, start and stop play, control master and speaker volume for group presets.
+Made a change to add "SPK-" in front of the MAC to create the DNI.  This allows installation of the speakers when alreay installed using Super LAN Connect to install. This enables Text-to-speech on the Speakers only (not available on Soundbars).
 
+# Using Text-to-Speech with this DH / SM Set
+
+To use Text-to-Speech (i.e., Speaker Companion app) with Speakers (not soundbars) while using this device handler, do the following:
+    a.  Uninstall the speaker and soundbar devices.
+    
+    b.  Replace the existing Service Manager with the latest version (12-16-17 or later).
+    
+    c.  Run 'Add a Thing' from the mobile app and add your speakers as standard (official) integration.
+    
+    d.  Run the Smart App and install the speaker in the expanded unofficial version.
+    
+    e.  You can then rename the Super LAN Connect speaker versions to get them out of your way (I add a "Z " in front to move them to the bottom of the list.
+    
 # Capabilities
 
 a.  Music playback control

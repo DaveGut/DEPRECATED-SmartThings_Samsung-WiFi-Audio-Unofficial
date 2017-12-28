@@ -17,7 +17,7 @@ on the Samsung WiFi Speakers; primarily various users on GitHub.com.
 
 definition(
 	name: "Samsung WiFi Speaker SM (unofficial)",
-	namespace: "djg",
+	namespace: "davegut",
 	author: "Dave Gutheinz",
 	description: "This is a Service Manager for Samsung WiFi speakers and soundbars.",
 	category: "SmartThings Labs",
@@ -218,7 +218,7 @@ def addSpeakers() {
 			d = getChildDevices()?.find { it.deviceNetworkId == selectedSpeaker.value.dni }
 		}
 		if (!d) {
-			addChildDevice("djg", "Samsung WiFi Speaker (Unofficial)", selectedSpeaker.value?.dni, hubId, [
+			addChildDevice("davegut", "Samsung WiFi Speaker (Unofficial)", selectedSpeaker.value?.dni, hubId, [
 				"label": "${selectedSpeaker.value.name}",
 				"name": "${selectedSpeaker.value.model}",
 				"data": [

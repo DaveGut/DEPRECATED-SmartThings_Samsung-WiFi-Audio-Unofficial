@@ -27,7 +27,7 @@ This is the beta version of the device handler with group presets.
 */
 
 metadata {
-	definition (name: "Samsung WiFi Speaker (Unofficial)", namespace: "djg", author: "David Gutheinz") {
+	definition (name: "Samsung WiFi Speaker (Unofficial)", namespace: "davegut", author: "David Gutheinz") {
 //	----- SPEAKER / PLAYER CONTROL -----
 		capability "Switch"
 		capability "Refresh"

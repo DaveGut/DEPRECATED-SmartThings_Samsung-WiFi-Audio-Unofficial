@@ -1,8 +1,6 @@
 /*
 Samsung WiFi Speaker (unofficial) Connect Service Manager
-
 Copyright 2017 Dave Gutheinz
-
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this 
 file except in compliance with the License. You may obtain a copy of the License at:
 		http://www.apache.org/licenses/LICENSE-2.0
@@ -10,30 +8,29 @@ Unless required by applicable law or agreed to in writing, software distributed 
 the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF 
 ANY KIND, either express or implied. See the License for the specific language governing 
 permissions and limitations under the License.
-
 ##### Discalimer:  This Service Manager and the associated Device Handlers are in no
 way sanctioned or supported by Samsung.  All  development is based upon open-source data
 on the Samsung WiFi Speakers; primarily various users on GitHub.com.
-
-12-01	Beta release of full-function DH and corresponding SM.
+12-01-17	Beta release of full-function DH and corresponding SM.
+12-28-17	Tested with device handlers for work-around.
 */
 
 definition(
 	name: "Samsung WiFi Speaker SM (unofficial)",
 	namespace: "djg",
 	author: "Dave Gutheinz",
-	description: "This is a Service Manager for Samsung speakers and soundbars.",
+	description: "This is a Service Manager for Samsung WiFi speakers and soundbars.",
 	category: "SmartThings Labs",
 	iconUrl: "https://www.samsung.com/us/smg/content/dam/IconLibrary/RingRadiatorTechnology.svg",
 	iconX2Url: "https://www.samsung.com/us/smg/content/dam/IconLibrary/RingRadiatorTechnology.svg",
 	iconX3Url: "https://www.samsung.com/us/smg/content/dam/IconLibrary/RingRadiatorTechnology.svg")
-    singleInstance: true
+	 singleInstance: true
 preferences {
 	page(name: "mainPage", title: "", content: "mainPage")
 	page(name: "speakerDiscovery", title: "", content: "speakerDiscovery", refreshTimeout: 5)
 }
 
-// ----- UPNP Search Target Definition -----------------------------
+//	----- UPNP Search Target Definition -----------------------------
 //	Search Target for Speakers
 def getSearchTargetA() {
 	def searchTarget = "urn:dial-multiscreen-org:device:dialreceiver:1"
@@ -49,13 +46,13 @@ def setInitialStates() {
 	}
 }
 
-// ----- Page: Main ------------------------------------------------
+//	----- Page: Main ------------------------------------------------
 def mainPage() {
 	setInitialStates()
 	def intro = "This Service Manager installs and manages Samsung WiFi Speakers. Additionally," +
 				"services are provided to the speakers during the grouping process.\n\r\n\r"
 	def page1 = "Press 'Next' to install Speakers.  Select '<' to return.  There are no" +
-    			"other options available."
+	 			"other options available."
 	return dynamicPage(
 		name: "mainPage",
 		title: "Samsung (Connect) Setup", 
@@ -66,7 +63,7 @@ def mainPage() {
 		section(page1) {}
 	}
 }
-// ----- Page: Hub (Speaker) Discovery -----
+//	----- Page: Hub (Speaker) Discovery -----
 def speakerDiscovery() {
 	def options = [:]
 	def verSpeakers = state.speakers.findAll{ it.value.verified == true }
@@ -78,7 +75,7 @@ def speakerDiscovery() {
 	ssdpSubscribe()
 	ssdpDiscover()
 	addSpeakerModel()
-    verifySpeakers()
+	verifySpeakers()
 	def text2 = "Please wait while we discover your Samsung Speakers. Discovery can take "+
 				"several minutes\n\r\n\r" +
 				"If no speakers are discovered after several minutes, press DONE.  This " +
@@ -100,7 +97,7 @@ def speakerDiscovery() {
 	}
 }
 
-// ----- Start-up Smart App Functions -----
+//	----- Start-up Smart App Functions -----
 def installed() {
 	initialize()
 }
@@ -117,7 +114,7 @@ def initialize() {
 	runEvery15Minutes(ssdpDiscover)
 }
 
-// ----- Speaker Discovery -----
+//	----- Speaker Discovery -----
 void ssdpSubscribe() {
 	def targetA = getSearchTargetA()
 	subscribe(location, "ssdpTerm.$targetA", ssdpHandler)
@@ -129,10 +126,10 @@ def subscribeHandler(evt) {
 	def hub = evt?.hubId
 	def parsedEvent = parseLanMessage(description)
 	def ip = convertHexToIP(parsedEvent.networkAddress)
-    def port = convertHexToInt(parsedEvent.deviceAddress)
-    def ssdpUSN = parsedEvent.ssdpUSN
-    def msg = "${ip}:${port} fired ssdpUSN: ${parsedEvent}"
-    sendEvent(name: "subscriptionReturn", value: "${msg}")
+	 def port = convertHexToInt(parsedEvent.deviceAddress)
+	 def ssdpUSN = parsedEvent.ssdpUSN
+	 def msg = "${ip}:${port} fired ssdpUSN: ${parsedEvent}"
+	 sendEvent(name: "subscriptionReturn", value: "${msg}")
 }
 
 void ssdpDiscover() {
@@ -147,70 +144,70 @@ def ssdpHandler(evt) {
 	def hub = evt?.hubId
 	def parsedEvent = parseLanMessage(description)
 	def ip = convertHexToIP(parsedEvent.networkAddress)
-    def port = convertHexToInt(parsedEvent.deviceAddress)
-    def mac = convertDniToMac(parsedEvent.mac)
-    def ssdpUSN = parsedEvent.ssdpUSN
-    def uuid = ssdpUSN.replaceAll(/uuid:/, "").take(36)
+	def port = convertHexToInt(parsedEvent.deviceAddress)
+	def mac = convertDniToMac(parsedEvent.mac)
+	def ssdpUSN = parsedEvent.ssdpUSN
+	def uuid = ssdpUSN.replaceAll(/uuid:/, "").take(36)
 	def speakers = state.speakers
 	if (speakers."${uuid}") {
 		def d = speakers."${uuid}"
 		if (d.ip != ip) {
 			d.ip = ip
-            def child = getChildDevice(parsedEvent.mac)
-            if (child) {
-            	log.info "Updating deviceIP to ${ip} for ${parsedEvent.mac}"
-            	child.updateData("deviceIP", ip)
-            }
+				def child = getChildDevice(parsedEvent.mac)
+				if (child) {
+					log.info "Updating deviceIP to ${ip} for ${parsedEvent.mac}"
+					child.updateData("deviceIP", ip)
+				}
 		}
 	} else {
 		def speaker = [:]
 		speaker["dni"] = parsedEvent.mac
-        speaker["mac"] = mac
+		speaker["mac"] = mac
 		speaker["ip"] = ip
-        speaker["ssdpPort"] = port
-        speaker["ssdpPath"] = parsedEvent.ssdpPath
+		speaker["ssdpPort"] = port
+		speaker["ssdpPath"] = parsedEvent.ssdpPath
 		speakers << ["${uuid}": speaker]
 	}
 }
 
-// ----- Verify Discovered Devices --------------------------
+//	----- Verify Discovered Devices --------------------------
 void addSpeakerModel() {
 	def speakers = state.speakers.findAll { !it?.value?.model }
 	speakers.each {
-    	sendCmd("${it.value.ssdpPath}", it.value.ip, it.value.ssdpPort, "addSpeakerModelHandler")
+	 	sendCmd("${it.value.ssdpPath}", it.value.ip, it.value.ssdpPort, "addSpeakerModelHandler")
 	}
 }
 void addSpeakerModelHandler(physicalgraph.device.HubResponse hubResponse) {
 	def respBody = hubResponse.xml
 	def model = respBody?.device?.modelName?.text()
-    def uuid = respBody?.device?.UDN?.text()
-    uuid = uuid.replaceAll(/uuid:/, "")
-    def speakers = state.speakers
+	 def uuid = respBody?.device?.UDN?.text()
+	 uuid = uuid.replaceAll(/uuid:/, "")
+	 def speakers = state.speakers
 	def speaker = speakers.find {it?.key?.contains("${uuid}")}
 	if (speaker) {
  		speaker.value << [model: model]
-    }
+	 }
 }
 def verifySpeakers() {
 	def speakers = state.speakers.findAll { !it?.value?.name }
-    speakers.each {
+	 speakers.each {
 		if (it.value.model) {
-	        GetSpkName(it.value.ip, "verifySpeakersHandler")
-        }
-    }
+			  GetSpkName(it.value.ip, "verifySpeakersHandler")
+		  }
+	 }
 }
 def verifySpeakersHandler(resp) {
 	def respBody = new XmlSlurper().parseText(resp.body)
-    def ip = respBody.speakerip
-    def name = respBody.response.spkname
-    def speakers = state.speakers
-    def speaker = speakers.find { "$it.value.ip" == "$ip" }
-    if (speaker) {
-    	speaker.value << [name: "$name", verified: true]
-    }
+	 def ip = respBody.speakerip
+	 def name = respBody.response.spkname
+	 def speakers = state.speakers
+	 def speaker = speakers.find { "$it.value.ip" == "$ip" }
+	 if (speaker) {
+	 	speaker.value << [name: "$name", verified: true]
+	 }
 }
 
-// ----- Add Hub Device to ST --------------------------------------
+//	----- Add Hub Device to ST --------------------------------------
 def addSpeakers() {
 	def hub = location.hubs[0]
 	def hubId = hub.id
@@ -227,7 +224,7 @@ def addSpeakers() {
 				"data": [
 					"deviceIP": "${selectedSpeaker.value.ip}",
 					"deviceMac": "${selectedSpeaker.value.mac}",
-                    "model": "${selectedSpeaker.value.model}"
+					"model": "${selectedSpeaker.value.model}"
 				]
 			])
 			selectedSpeaker.value << [installed: true]
@@ -239,20 +236,21 @@ def addSpeakers() {
 def requestSubSpeakerData(mainSpkMac, mainSpkDNI) {
 	selectedSpeakers.each { dni ->
 		def selectedSpeaker = state.speakers.find { it.value.dni == dni }
-        if (selectedSpeaker.value.dni != mainSpkDNI) {
+		  if (selectedSpeaker.value.dni != mainSpkDNI) {
 			def child = getChildDevice(selectedSpeaker.value.dni)
 			child.getSubSpeakerData(mainSpkMac, mainSpkDNI)
-        }
-    }
+		  }
+	 }
 }
 def sendDataToMain(mainSpkDNI, speakerData) {
+log.trace "sendDataToMain, mainSpkDNI = ${mainSpkDNI}, speakerData = ${speakerData}"
 	def child = getChildDevice(mainSpkDNI)
 	child.rxDataFromSM(speakerData)
 }
 def getIP(spkDNI) {
 	def selectedSpeaker = state.speakers.find { it.value.dni == spkDNI }
-    def spkIP = selectedSpeaker.value.ip
-    return spkIP
+	 def spkIP = selectedSpeaker.value.ip
+	 return spkIP
 }
 def sendCmdToSpeaker(spkDNI, command, params, parseAction) {
 	def child = getChildDevice(spkDNI)
@@ -261,31 +259,30 @@ def sendCmdToSpeaker(spkDNI, command, params, parseAction) {
 			child.SetChVolMultich(params, parseAction)
 			break
 		case "SetVolume":
-log.debug params
-        	child.setLevel(params)
+		  	child.setLevel(params)
 			break
-        case "setSubSpkVolume":
-        	child.setSubSpkVolume(params)
-            break
-        case "GetFunc" :
-        	child.GetFunc()
-            break
+		  case "setSubSpkVolume":
+		  	child.setSubSpkVolume(params)
+				break
+		  case "GetFunc" :
+		  	child.GetFunc()
+				break
 		default:
 			break
 	}
 }
 def getDataFromSpeaker(spkDNI, command) {
 	def child = getChildDevice(spkDNI)
-    switch(command) {
+	 switch(command) {
  		case "getSpkVolume":
-	        def spkVol = child.getSpkVol()
-	        return spkVol
-    	case "getSpkEqLevel":
-        	def spkEqVol = child.getSpkEqLevel()
-            return spkEqVol
-        default:
-        	break
-    }
+			  def spkVol = child.getSpkVol()
+			  return spkVol
+	 	case "getSpkEqLevel":
+		  	def spkEqVol = child.getSpkEqLevel()
+				return spkEqVol
+		  default:
+		  	break
+	 }
 }
 
 //	----- SEND COMMAND TO SOUNDBAR -----
@@ -305,23 +302,23 @@ private sendCmd(command, deviceIP, devicePort, action){
 //	----- Samsung WiFi Speaker Commands -----
 def GetMainInfo(deviceIP, action) {
 	sendCmd("/UIC?cmd=%3Cname%3EGetMainInfo%3C/name%3E",
-    		deviceIP, "55001", action)
+	 		deviceIP, "55001", action)
 }
 def GetSpkName(deviceIP, action) {
 	sendCmd("/UIC?cmd=%3Cname%3EGetSpkName%3C/name%3E", 
-    	    deviceIP, "55001", action)
+	 		 deviceIP, "55001", action)
 }
 //	bogus message to cause second response to be parsed.
 def nextMsg(deviceIP, action) {
 	sendCmd("/UIC?cmd=%3Cname%3ENEXTMESSAGE%3C/name%3E",
-    		deviceIP, "55001", action)
+	 		deviceIP, "55001", action)
 }
 
-// ----- Utility Functions -----
+//	----- Utility Functions -----
 private convertDniToMac(dni) {
 	def mac = "${dni.substring(0,2)}:${dni.substring(2,4)}:${dni.substring(4,6)}:${dni.substring(6,8)}:${dni.substring(8,10)}:${dni.substring(10,12)}"
 	mac = mac.toLowerCase()
-    return mac
+	return mac
 }
 private Integer convertHexToInt(hex) {
 	Integer.parseInt(hex,16)

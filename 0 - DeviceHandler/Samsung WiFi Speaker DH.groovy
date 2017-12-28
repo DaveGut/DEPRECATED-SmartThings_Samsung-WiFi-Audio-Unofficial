@@ -314,6 +314,9 @@ def setTestValue(){
 	}
 //	sendEvent(name: "preset_2", value: state.vacantPresetTxt)
 //	log.debug state
+	def childDni = "off-${device.deviceNetworkId}"
+//log.debug childDni
+//	addChildDevice("smartthings", "LAN SamsungAudio", childDni)
 	state.selSpkNo = 0
 }
 def getSources() {
@@ -350,8 +353,8 @@ def on() {
 	if (state.hwtype == "HW-") {
 		SetPowerStatus("1")
 	}
-	play()
-	runIn(2, refresh)
+    play()
+    runIn(2, refresh)
 }
 def off() {
 	sendEvent(name: "switch", value: "0")
@@ -359,7 +362,7 @@ def off() {
 	if (state.hwtype == "HW-") {
 		SetPowerStatus("0")
 	}
-	runIn(2, refresh)
+    runIn(2, refresh)
 }
 
 def setInputSource() {
@@ -406,9 +409,9 @@ def getPwr() {
 	if (state.hwType == "HW-") {
 		GetPowerStatus()
 	} else {
-		def pwrStat = device.currentValue("switch")
-		sendEvent(name: "switch", value: pwrStat)
-	}
+    	def pwrStat = device.currentValue("switch")
+        sendEvent(name: "switch", value: pwrStat)
+    }
 }
 
 //	PLAYER CONTROL FUNCTIONS (play/pause, next, previous, shuffle, repeat)
@@ -760,7 +763,7 @@ def addPreset(preset, psType) {
 }
 //	===== Capture Data and Add Group Preset ===== 
 def getSubSpeakerData(mainSpkMAC, mainSpkDNI) {
-log.trace "getSubSpeakerData, mainSpkDNI = ${mainSpkDNI}, mainSpkMAC = ${mainSpkMAC}"
+//	log.trace "getSubSpeakerData, mainSpkDNI = ${mainSpkDNI}, mainSpkMAC = ${mainSpkMAC}"
 	state.spkType = "sub"
 	state.mainSpkDNI = mainSpkDNI
 	state.mainSpkMAC = mainSpkMAC
@@ -1089,7 +1092,7 @@ private sendCmd(command, action){
 def generalResponse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
+//log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
 	switch(respMethod) {
 //	----- SOUNDBAR STATUS METHODS -----
 		case "PowerStatus":
@@ -1281,9 +1284,9 @@ log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
 			break
 		case "MainInfo":
 			def grpMainMac = respData.groupmainmacaddr
-			if (grpMainMac == "00:00:00:00:00:00") {
-				return 		//	Speakers are not in a group
-			} else if (respData.groupmainmacaddr != state.mainSpkMAC) {
+            if (grpMainMac == "00:00:00:00:00:00") {
+            	return 		//	Speakers are not in a group
+            } else if (respData.groupmainmacaddr != state.mainSpkMAC) {
 				log.debug "${device.label}_generalResponse_${respMethod}: MAC Mismatch."	
 				return
 			}
@@ -1371,7 +1374,7 @@ log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
 			break
  		default:
 			nextMsg()
-log.debug "${device.label}_generalResponse_${respMethod}: Data: ${respData}"
+//log.debug "${device.label}_generalResponse_${respMethod}: Data: ${respData}"
 			break
 	}
 }
@@ -1383,7 +1386,7 @@ log.debug "${device.label}_generalResponse_${respMethod}: Data: ${respData}"
 def searchRadioList(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-log.trace "${device.label}_searchRadioList_${respMethod}:  Parsing method."
+//log.trace "${device.label}_searchRadioList_${respMethod}:  Parsing method."
 	def cp = respData.cpname
 	if (cp == "AmazonPrime" && respData.root == "My Music" && respData.category.@isroot == "1") {
 		GetSelectRadioList("0", "searchRadioList")
@@ -1430,20 +1433,20 @@ log.trace "${device.label}_searchRadioList_${respMethod}:  Parsing method."
 
 def titleSelected(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
-log.trace "${device.label}_titleSelected_${respMethod}:  Parsing method."
+//log.trace "${device.label}_titleSelected_${respMethod}:  Parsing method."
 	SetPlaySelect("0", "startTitle")
 }
 
 def startTitle(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
-log.trace "${device.label}_startTitle_${respMethod}:  Parsing method."
+//log.trace "${device.label}_startTitle_${respMethod}:  Parsing method."
 	runIn(4, GetFunc)
 }
 
 def startTuneIn(resp) {
 //	Special since TuneIn takes a very long time to load into player.
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
-log.trace "${device.label}_startTuneIn_${respMethod}:  Parsing method."
+//log.trace "${device.label}_startTuneIn_${respMethod}:  Parsing method."
 	play()
 	runIn(6, GetFunc)
 }
@@ -1451,7 +1454,7 @@ log.trace "${device.label}_startTuneIn_${respMethod}:  Parsing method."
 private addPresetParse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-log.trace "${device.label}_addPresetParse_${respMethod}:  Parsing method."
+//log.trace "${device.label}_addPresetParse_${respMethod}:  Parsing method."
 	def cp = respData.cpname
 	def path = ""
 	def title = ""
@@ -1497,14 +1500,14 @@ def parse(String description) {
 		def respMethod = response.method
 		switch(respMethod) {
 			case "MainInfo":
-			case "PausePlaybackEvent":
+	        case "PausePlaybackEvent":
 				generalResponse(resp)
 				break
-			case "SelectCpService":
-log.debug "${device.label}_parse_${respMethod}:  Method NOT FORWARDED. DATA: \n\r\n\r${response}"
+	        case "SelectCpService":
+//log.debug "${device.label}_parse_${respMethod}:  Method NOT FORWARDED. DATA: \n\r\n\r${response}"
 				break
 			default:
-log.debug "${device.label}_parse_${respMethod}:  Method NOT FORWARDED."
+//log.debug "${device.label}_parse_${respMethod}:  Method NOT FORWARDED."
 				break
 		}
 	} catch (Exception e) {

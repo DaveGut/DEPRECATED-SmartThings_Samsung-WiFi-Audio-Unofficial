@@ -1247,17 +1247,19 @@ def playTrackAndRestore(uri, duration, volume=null) {
 def playTrackAndResume(uri, duration, volume=null) {
 	if (device.currentValue("status") != "playing") {
 		state.resumePlay = "no"
-	}
+	} else {
+    	state.resumePlay = "yes"
+    }
 	if (state.spkType == "sub") {
 		//	If a subspeaker in group, send to the Main speaker.
 		log.info "${device.label}_playTrackAndResume: Subspeaker sending TTS to Main."
 		parent.sendCmdToMain(state.mainSpkDNI, "playTrackAndResume", uri, duration, volume, "")
 	} else if (state.hwtype == "HW-") {
+
 		//	Soundbar only.  Play using UPNP commands.
 		pause()
-		log.info "${device.label}_playTrackAndResume($uri, $duration, $volume)"
+		log.info "${device.label}_playTrackAndResume($uri, $duration, $volume) on Sundbaar"
 		if (state.resumePlay == "yes") {
-			//	Only resume play of original playTrackAndResume
 			def inputSource = device.currentValue("inputSource")
 			def subMode = state.subMode
 			def oldLevel = device.currentValue("level").toInteger()
@@ -1268,7 +1270,11 @@ def playTrackAndResume(uri, duration, volume=null) {
 		if(newLevel) {
 				setLevel(newLevel)
 		}
- 		playUri(uri, duration)
+		def result = []
+		result << sendUpnpCmd("SetAVTransportURI", [InstanceID: 0, CurrentURI: uri, CurrentURIMetaData: ""])
+		result << sendUpnpCmd("Play")
+		result
+
 	} else {
 		//	Speakers - Play on surrogate LAN SAMSUNG SPEAKER
 		if (ttsSpeaker == null) {
@@ -1289,16 +1295,7 @@ def playTrackAndResume(uri, duration, volume=null) {
 			parent.sendCmdToSurrogate(ttsSpeaker, playType, uri, duration, volume, "")
 		}
 	}
-	state.resumePlayer = "yes"
-}
 
-def playUri(uri, duration) {
-	//	The actual UPNP SOAP ACTIONS.
-	log.info "${device.label}_playUri: playing TTS Sound using sendUpnpCmd."
-	def result = []
-	result << sendUpnpCmd("SetAVTransportURI", [InstanceID: 0, CurrentURI: uri, CurrentURIMetaData: ""])
-	result << sendUpnpCmd("Play")
-	result
 }
 
 def resumeHwPlayer(data) {

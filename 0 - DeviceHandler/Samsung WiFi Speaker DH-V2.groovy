@@ -30,18 +30,18 @@ This is the beta version of the device handler adding TTS Support.
 01-10	Updated code to incorporate TTS
 01-14	Updated to V2, changing name to match.
 Known Issues and Concerns
-a.	TuneIn continues to be slow and often does not recover
-	(requires pressing play on control to continue).
-c.	Not all TTS functions are supported.
-	"playTextAndResume" - YES
-	"playTrackAndResume" - YES
-	"playTextAndRestore" - YES
-	"playTrackAndRestore" - YES
-	"playTextAndTrack" - NO
-	"playSoundAndTrack" - NO
-	"playTrackAtVolume" - NO
-	"playTrack" - NO
-	"playText" - NO
+		a.	TuneIn continues to be slow and often does not recover
+			(requires pressing play on control to continue).
+		b.	TTS Implementation is as ST capability Audio
+            Notification:
+				playTrackAndResume(uri, duration, level)
+				playTrackAndRestore(uri, duration, level)
+				playTrackAtVolume(uri, level) - NOT IMPLEMENTED.
+01-19	Fixed error causing UPnP play not to work at times.
+		Fixed logic to assure non-wifi modes will restore
+        after UPnP audio play.
+        Improved Refresh logic to assure input source is
+        updated.
 */
 metadata {
 	definition (name: "Samsung WiFi Speaker (Unofficial-V2)", namespace: "davegut", author: "David Gutheinz") {
@@ -105,16 +105,6 @@ metadata {
 		attribute "errorMessage", "string"
 		//	----- URL and Text-to-Speech Play Commands -----
 		capability "Audio Notification"
-		command "playTextAndResume"
-		command "playTrackAndResume"
-		command "playTextAndRestore"
-		command "playTrackAndRestore"
-		command "playTextAndTrack"
-		command "playSoundAndTrack"
-		command "playTrackAtVolume"
-		command "playTrack"
-		command "playText"
-		command "restorePlayer"
 	}
 
 	tiles(scale: 2) {
@@ -267,6 +257,7 @@ metadata {
 	//	===== Set "groups" to "yes" to display group tiles =====
 	//	========================================================
 	def groups = "yes"
+//	def groups = "no"
 	if (groups == "yes") {
 		details(["main", "switch", "source", "updateDisplay","eqPreset", "shuffle", "repeat",
 			'preset_1', 'preset_2', 'preset_3', 'preset_4', 'preset_5', 'preset_6', 'preset_7',
@@ -353,10 +344,10 @@ def update() {
 	if (rearLevel){
 		SetRearLevel(rearLevel)
 	}
-	setTestValues()
 	unschedule()
 	runEvery5Minutes(refresh)
-	refresh()
+//	refresh()
+//	setTestValues()
 }
 
 def setTestValues(){
@@ -380,14 +371,15 @@ def getSources() {
 			case "HW-MS750":
 			case "HW-MS7500":
 			case "HW-K850":
-			sources = ["wifi", "bt", "aux", "optical", "hdmi1", "hdmi2"]
-			break
+				sources = ["wifi", "bt", "aux", "optical", "hdmi1", "hdmi2"]
+				break
 			case "HW-K550":
 			case "HW-J650":
 			case "HW-H750":
  					sources = ["wifi", "bt", "soundshare", "aux", "optical", "usb", "hdmi"]
  				break
 			default:
+				sources = ["wifi","bt","aux","optical"]
 				break
 		}
 	}
@@ -510,8 +502,6 @@ def playPause(uicStatus, cpmStatus) {
 			cpm_SetPlaybackControl(cpmStatus)
 			break
 		default:
-			log.info "${device.label}_playPause: Playback Control not valid for device or mode"
-			setErrorMsg("playPause: Playback Control not valid for device or mode")
 		 	return
 	}
 	runIn(1, getPlayStatus)
@@ -1188,46 +1178,7 @@ def schedSetTrackDescription(playtime) {
 //	======================================
 //	===== Play external URI Commands =====
 //	======================================
-//	Play Test (call other functions to play
-def playTextAndResume(text, volume=null) {
-	log.info "${device.label}_playTextAndResume($text, $volume)"
-	def sound = textToSpeech(text)
-	playTrackAndResume(sound.uri, (sound.duration as Integer) + 1, volume)
-}
-
-def playTextAndRestore(text, volume=null) {
-	log.info "${device.label}_playTextAndResume($text, $volume)"
-	def sound = textToSpeech(text)
-	playTrackAndRestore(sound.uri, (sound.duration as Integer) + 1, volume)
-}
-
-def playTextAndTrack(text, trackData, volume=null) {
-	log.info "${device.label}_playTextAndTrack($text, $trackData, $volume)"
-	def sound = textToSpeech(text)
-	playSoundAndTrack(sound.uri, (sound.duration as Integer) + 1, trackData, volume)
-}
-
-def playSoundAndTrack(soundUri, duration, trackData, volume=null) {
-	log.debug "${device.label}_playSoundAndTrack: Not Supported."
-	setErrorMsg("_playSoundAndTrack: Not Supported.")
-}
-
-def playTrack(String uri, metaData="") {
-	log.debug "${device.label}_playTrack: Not Supported."
-	setErrorMsg("_playTrack: Not Supported.")
-}
-
-def playTrack(Map trackData) {
-	log.debug "${device.label}_playTrack: Not Supported."
-	setErrorMsg("_playTrack: Not Supported.")
-}
-
-def playText(String msg) {
-	log.debug "${device.label}_playText: Not Supported."
-	setErrorMsg("_playText: Not Supported.")
-}
-
-def playTrackAtVolume(String uri, volume) {
+def playTrack(String uri, volume) {
 	log.debug "${device.label}_playTrackAtVolume: Not Supported."
 	setErrorMsg("_playTrackAtVolume: Not Supported.")
 }
@@ -1245,22 +1196,22 @@ def playTrackAndRestore(uri, duration, volume=null) {
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
-	if (device.currentValue("status") != "playing") {
-		state.resumePlay = "no"
+//	playTrackAndResume(sound.uri, (sound.duration as Integer) + 1, volume)
+	def inputSource = device.currentValue("inputSource")
+	if (inputSource == "wifi" && device.currentValue("status") != "playing") {
+	   	state.resumePlay = "no"
 	} else {
-    	state.resumePlay = "yes"
-    }
+	   	state.resumePlay = "yes"
+	}
 	if (state.spkType == "sub") {
 		//	If a subspeaker in group, send to the Main speaker.
 		log.info "${device.label}_playTrackAndResume: Subspeaker sending TTS to Main."
 		parent.sendCmdToMain(state.mainSpkDNI, "playTrackAndResume", uri, duration, volume, "")
 	} else if (state.hwtype == "HW-") {
-
 		//	Soundbar only.  Play using UPNP commands.
-		pause()
 		log.info "${device.label}_playTrackAndResume($uri, $duration, $volume) on Sundbaar"
+        pause()
 		if (state.resumePlay == "yes") {
-			def inputSource = device.currentValue("inputSource")
 			def subMode = state.subMode
 			def oldLevel = device.currentValue("level").toInteger()
 			def delayTime = duration.toInteger() + 5
@@ -1274,7 +1225,6 @@ def playTrackAndResume(uri, duration, volume=null) {
 		result << sendUpnpCmd("SetAVTransportURI", [InstanceID: 0, CurrentURI: uri, CurrentURIMetaData: ""])
 		result << sendUpnpCmd("Play")
 		result
-
 	} else {
 		//	Speakers - Play on surrogate LAN SAMSUNG SPEAKER
 		if (ttsSpeaker == null) {
@@ -1285,7 +1235,6 @@ def playTrackAndResume(uri, duration, volume=null) {
 			pause()
 			if (state.resumePlay == "yes") {
 				//	Only resume play of original playTrackAndResume
-				def inputSource = device.currentValue("inputSource")
 				def subMode = state.subMode
 				def oldLevel = device.currentValue("level").toInteger()
 				def delayTime = duration.toInteger() + 1
@@ -1295,7 +1244,6 @@ def playTrackAndResume(uri, duration, volume=null) {
 			parent.sendCmdToSurrogate(ttsSpeaker, playType, uri, duration, volume, "")
 		}
 	}
-
 }
 
 def resumeHwPlayer(data) {
@@ -1314,7 +1262,7 @@ def resumeHwPlayer(data) {
 		//	Default, untested action.
 		SetFunc(data.inputsource)
 	}
-			state.resumePlay = "yes"
+	state.resumePlay = "yes"
 }
 
 def resumeSpkPlayer(data) {
@@ -1363,6 +1311,8 @@ def refresh() {
 		restorePlayer data for Multiroom Ap
 		called stations.
 	*/
+log.trace "RUNNING REFRESH"
+    getPwr()
 	GetFunc()
 	getPlayStatus()
 	GetVolume()
@@ -1371,6 +1321,7 @@ def refresh() {
 		state.restorePlayer = "yes"
 		GetRadioInfo("getCpDataParse")		
 	}
+    setTrackDescription()
 }
 
 def updateData(name, value) {
@@ -1398,6 +1349,7 @@ private sendCmd(command, action){
 		null,
 		[callback: action]
 	)
+//log.trace cmdStr
 	sendHubCommand(cmdStr)
 }
 
@@ -1411,14 +1363,9 @@ private sendUpnpCmd(String action, Map body = [InstanceID:0, Speed:1]) {
 		body:	body,
 		headers: [Host: "${deviceIP}:9197", CONNECTION: "close"]
 	)
-//	log.trace "\n${result.action.encodeAsHTML()}"
+//log.trace "\n${result.action.encodeAsHTML()}"
 	result
 }
-
-/*private delayAction(long time) {
-	log.trace "${device.label}_delayAction(${time})."
-	new physicalgraph.device.HubAction("delay $time")
-}*/
 
 //	==================================
 //	===== General Response Parse =====
@@ -1426,7 +1373,7 @@ private sendUpnpCmd(String action, Map body = [InstanceID:0, Speed:1]) {
 def generalResponse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-//	log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
+//log.trace "${device.label}_generalResponse_${respMethod}:  Parsing method."
 	switch(respMethod) {
 //	----- SOUNDBAR STATUS METHODS -----
 		case "PowerStatus":
@@ -1673,7 +1620,7 @@ def generalResponse(resp) {
 def searchRadioList(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-	log.trace "${device.label}_searchRadioList_${respMethod}:  Parsing method."
+//log.trace "${device.label}_searchRadioList_${respMethod}:  Parsing method."
 	def player = respData.cpname
 	if (player == "AmazonPrime" && respData.root == "My Music" && respData.category.@isroot == "1") {
 		GetSelectRadioList("0", "searchRadioList")
@@ -1717,10 +1664,9 @@ def searchRadioList(resp) {
 
 def titleSelected(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
-	log.trace "${device.label}_titleSelected_${respMethod}:  Parsing method."
+//log.trace "${device.label}_titleSelected_${respMethod}:  Parsing method."
 	SetPlaySelect("0", "generalResponse")
 	cpm_SetPlaybackControl("play")
-//	SetSkipCurrentTrack()	
 	runIn(5, play)
 	runIn(6, setTrackDescription)
 }
@@ -1728,7 +1674,7 @@ def titleSelected(resp) {
 private getCpDataParse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-	log.trace "${device.label}_getCpDataParse_${respMethod}:  Parsing method."
+//log.trace "${device.label}_getCpDataParse_${respMethod}:  Parsing method."
 	def player = respData.cpname
 	state.currentPlayer = "${player}"
 	def cpChannels = state.cpChannels
@@ -1791,20 +1737,17 @@ def parse(String description) {
 		def respMethod = response.method
 		switch(respMethod) {
 			case "MainInfo":
-//			case "MediaBufferEndEvent":
 			case "StartPlaybackEvent":
 			case "MediaBufferStartEvent":
-//			case "StopPlaybackEvent":
-//			case "EndPlaybackEvent":
-//			case "PausePlaybackEvent":
 				generalResponse(resp)
+//log.trace "${device.label}_parse_${respMethod}:  Forwarded to generalResponse."
 				break
 			default:
-				//log.debug "${device.label}_parse_${respMethod}:  Method NOT FORWARDED."
+//log.trace "${device.label}_parse_${respMethod}:  IGNORED."
 				break
 		}
 	} catch (Exception e) {
-//		log.debug "${device.label}_parse:  Received message is unreadable.  Method:  ${description}"
+//log.error "${device.label}_parse:  Received message is unreadable.  Method:  ${description}"
 	}
 }
 
@@ -1814,6 +1757,7 @@ def nextMsgResponse(resp) {
 	*/
 	def response = new XmlSlurper().parseText(resp.body)
 	def respMethod = response.method
+//log.debug "${device.label}_nextMsgResponse_${respMethod}:  Forwarded to generalResponse."
 	generalResponse(resp)
 }
 

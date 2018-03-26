@@ -1,0 +1,18 @@
+Instructions for the test version
+
+First:  capabilities in this version:
+
+a.  Supports custom text to speech on both speakers and soundbars using four commands that are exposed (i.e. accessed in WebCore).
+
+	1)	playTextAsVoiceAndResume(text, volume, voice)
+	2)	playTextAsVoicdAndRestore(text, volume, voice)
+	The above two support voices from Amazon Polly list of voices.
+	3)	playTextAndRestore(text, volume)
+	4)	playTextAndResume(text, volume)
+b.	Fixed Soundbar play text function.
+c.	Added user entered language for SOUNDBAR ONLY.
+d.	Added user entered voice for SPEAKER ONLY.
+
+Installation:
+
+Files located at 

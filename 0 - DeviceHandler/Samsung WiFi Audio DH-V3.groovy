@@ -201,8 +201,8 @@ metadata {
 
 		//	----- SOUNDBAR CONTROL TILES -----
 		standardTile('switch', 'device.switch', width: 1, height: 1, decoration: 'flat', canChangeIcon: true) {
-			state '0', label:'OFF', action:'on', backgroundColor: '#ffffff'
-			state '1', label:'ON', action:'off', backgroundColor: '#00a0dc'
+			state 'off', label:'OFF', action:'on', backgroundColor: '#ffffff'
+			state 'on', label:'ON', action:'off', backgroundColor: '#00a0dc'
 		}
 
 		standardTile('source', 'device.inputSource', width: 1, height: 1, decoration: 'flat', canChangeIcon: true) {
@@ -534,7 +534,7 @@ def connectToSpeaker() {
 //	====================================
 def on() {
 	SetPowerStatus("1")
-	sendEvent(name: "switch", value: "1")
+	sendEvent(name: "switch", value: "on")
     play()
     updateDisplay()
 }
@@ -542,7 +542,7 @@ def on() {
 def off() {
 	stop()
 	SetPowerStatus("0")
-	sendEvent(name: "switch", value: "0")
+	sendEvent(name: "switch", value: "off")
 	sendEvent(name: "trackDescription", value: "Player is Stopped")
 }
 
@@ -1578,7 +1578,11 @@ def generalResponse(resp) {
 //	----- SOUNDBAR STATUS METHODS -----
 		case "PowerStatus":
 			def pwrStat = respData.powerStatus
-			sendEvent(name: "switch", value: pwrStat)
+            if (pwrStat == "0") {
+				sendEvent(name: "switch", value: "off")
+            } else {
+				sendEvent(name: "switch", value: "on")
+            }
 			break
 		case "CurrentFunc":
 			if (respData.submode == "dmr") {	//	Ignore dmr encountered during TTS

@@ -488,7 +488,7 @@ def realUpdate() {
 
 def setTestValues(){
 //	Utilities used during test for various reasons.
-//	log.debug state
+	log.debug state
 }
 
 def getSources() {
@@ -619,7 +619,7 @@ def play() {
 		default:
 		 	return
 	}
-	setTrackDescription()
+	runIn(5, setTrackDescription)
 }
 
 def pause() {
@@ -1218,7 +1218,7 @@ def playCpContent(player, playerNo, path, title) {
 			SetCpService(playerNo, "generalResponse")
 			PlayById(player, path, "generalResponse")
 			cpm_SetPlaybackControl("play")
-			runIn(4, play)
+			runIn(5, play)
 			break
 	}
 }
@@ -1241,31 +1241,35 @@ def setTrackDescription() {
 	} else {
 		switch(submode) {
 			case "dlna":
-			//	use default "WiFi" until DLNA Functions are tested.
-				sendEvent(name: "trackDescription", value: "WiFi (DLNA)")
-                state.updateTrackDescription = "no"
+                GetMusicInfo("generalResponse")
 				break
 			case "cp":
-				state.updateTrackDescription = "yes"
-				sendEvent(name: "trackDescription", value: "UPDATING")
 				GetRadioInfo("generalResponse")
 				break
 			case "device":
 				sendEvent(name: "trackDescription", value: "WiFi (device)")
+				log.debug "${device.label}_setTrackDescription: Updated trackDesciption to ${device.currentValue("WiFi (device)")}"
 				GetAcmMode()
+                state.updateTrackDescription = "no"
+				sendEvent(name: "shuffle", value: "inactive")
+				sendEvent(name: "repeat", value: "inactive")
+				break
+			case "subdevice":
+				sendEvent(name: "trackDescription", value: "WiFi (subdevice)")
+				log.debug "${device.label}_setTrackDescription: Updated trackDesciption to ${device.currentValue("WiFi (subdevice)")}"
                 state.updateTrackDescription = "no"
 				sendEvent(name: "shuffle", value: "inactive")
 				sendEvent(name: "repeat", value: "inactive")
 				break
 			default:
 				sendEvent(name: "trackDescription", value: "WiFi (${submode})")
+				log.debug "${device.label}_setTrackDescription: Updated trackDesciption to ${device.currentValue("WiFi (${submode})")}"
                 state.updateTrackDescription = "no"
 				sendEvent(name: "shuffle", value: "inactive")
 				sendEvent(name: "repeat", value: "inactive")
 		}
-		runIn(6, getPlayTime)
+		runIn(10, getPlayTime)
 	}
-	traceLogging("debug", "${device.label}_setTrackDescription: Updated trackDesciption to ${device.currentValue("trackDescription")}")
 }
 
 def getPlayTime() {
@@ -1281,12 +1285,12 @@ def getPlayTime() {
 def schedSetTrackDescription(playtime) {
 	def nextUpdate
 	if (state.trackLength == null || state.trackLength < playtime) {
-		nextUpdate = 60
+		nextUpdate = 600
 	} else {
 		nextUpdate = state.trackLength - playtime + 3
 	}
 	runIn(nextUpdate, setTrackDescription)
-	traceLogging("debug", "${device.label}_schedSetTrackDescription: Track Description will update in ${nextUpdate} seconds")
+	log.debug "${device.label}_schedSetTrackDescription: Track Description will update in ${nextUpdate} seconds"
 }
 
 //	======================================
@@ -1669,11 +1673,15 @@ def generalResponse(resp) {
 //	----- MUSIC INFORMATION METHODS
 		case "MusicInfo":
 			if (respData == "No Music" || respData.errCode == "fail to play") {
-            	log.warn "${device.label}_generalResponse_${respMethod}: response is no music or fail to play."
+				sendEvent(name: "trackDescription", value: "WiFi DLNA not playing")
+				state.updateTrackDescription = "no"
 				return
-			}
-			sendEvent(name: "trackDescription", value: "${respData.title}\n\r${respData.artist}")
-			state.updateTrackDescription = "yes"
+			} else {
+	            def timelength = respData.timelength.toString()
+				state.trackLength = timelength[2..3].toInteger() * 60 + timelength[5..6].toInteger()
+				sendEvent(name: "trackDescription", value: "${respData.title}\n\r${respData.artist}")
+				state.updateTrackDescription = "yes"
+            }
 			break
 		case "RadioInfo":
             state.trackLength = 0
@@ -1695,9 +1703,11 @@ def generalResponse(resp) {
 			sendEvent(name: "status", value: playerStatus)
             
 			def player = respData.cpname
-			def trackDesc
+            def trackDesc
+			state.updateTrackDescription = "yes"
             if (player == "Unknown") {
-				trackDesc = "Unknown"
+				trackDesc = "Unknown Player"
+				state.updateTrackDescription = "no"
             } else if (player == "Pandora" && respData.tracklength == "0") {
 			//	Special code to handle Pandora Commercials (reported at 0 length)
 				trackDesc = "Pandora: Commercial"
@@ -1707,13 +1717,10 @@ def generalResponse(resp) {
 				state.trackLength = respData.tracklength.toInteger()
 			} else {
 				trackDesc = "${player}: ${respData.title}"
+//				state.trackLength = respData.tracklength.toInteger()
 			}
-            
-            if (state.trackLength == 0) {
-            	state.updateTrackDescription = "no"
-            }
 			sendEvent(name: "trackDescription", value: trackDesc)
-			traceLogging("debug", "${device.label}__generalResponse_${respMethod}:  Updated trackDesciption to ${trackDesc}")
+			log.debug "${device.label}__generalResponse_${respMethod}:  Updated trackDesciption to ${trackDesc}"
             
 			if (respData.shufflemode == "") {
 				sendEvent(name: "shuffle", value: "inactive")
@@ -1725,11 +1732,8 @@ def generalResponse(resp) {
 			} else  {
 				sendEvent(name: "repeat", value: respData.repeatmode)
 			}
- 			break
+			break
 		case "MusicPlayTime":
-			if (state.subMode == "dlna") {
-				state.tracklength = respData.timelength.toInteger()
-			}
 			if (respData.playtime != "" && respData.playtime != null){
 				schedSetTrackDescription(respData.playtime.toInteger())
 			} else {

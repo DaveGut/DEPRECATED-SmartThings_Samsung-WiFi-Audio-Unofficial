@@ -598,7 +598,7 @@ def getPwr() {
 		GetPowerStatus()
 	} else {
     	if (device.currentValue("status") == "playing") {
-        	sendEvent(name: "switch", value: "1")
+        	sendEvent(name: "switch", value: "on")
         } else {
 			sendEvent(name: "switch", value: device.currentValue("switch"))
         }

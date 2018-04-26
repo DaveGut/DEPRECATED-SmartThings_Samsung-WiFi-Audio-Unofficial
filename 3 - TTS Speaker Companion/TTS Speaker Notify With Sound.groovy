@@ -240,17 +240,16 @@ def appTouchHandler(evt) {
 }
 
 private takeAction(evt) {
-	log.trace "takeAction()"
     if (state.soundType == "track") {
-log.debug "Sending TRACK:  ${state.sound.uri} // ${state.sound.duration} // ${volume}"
+		log.info "Sending TRACK:  ${state.sound.uri} // ${state.sound.duration} // ${volume}"
 		if (resumePlaying){
 			speaker.playTrackAndResume(state.sound.uri, state.sound.duration, volume)
  		} else {
 			speaker.playTrackAndRestore(state.sound.uri, state.sound.duration, volume)
         }
 	} else {
+		log.debug "Sending Text to speaker: ${state.sound} // ${volume} // ${ttsVoice}"
 		if (resumePlaying){
-log.debug "Sending Text to speaker: ${state.sound} // ${volume} // ${ttsVoice}"
 //        	speaker.playTextAndResume(state.sound, volume)
         	speaker.playTextAsVoiceAndResume(state.sound, volume, ttsVoice)
  		} else {

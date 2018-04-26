@@ -1444,7 +1444,7 @@ def nextMsg() {
 //	===== SEND Commands to Devices =====
 //	====================================
 private sendCmd(command, action){
-	log.debug "sendCmd:  ${command}"
+//	log.debug "sendCmd:  ${command}"
 	def deviceIP = getDataValue("deviceIP")
 	def cmdStr = new physicalgraph.device.HubAction([
 		method: "GET",
@@ -1459,7 +1459,7 @@ private sendCmd(command, action){
 }
 
 private sendUpnpCmd(String action, Map body = [InstanceID:0, Speed:1]) {
-	log.debug "sendUpnpCmd:  ${action}"
+//	log.debug "sendUpnpCmd:  ${action}"
 	def deviceIP = getDataValue("deviceIP")
 	def result = new physicalgraph.device.HubSoapAction(
 		path:	"/upnp/control/AVTransport1",
@@ -1477,7 +1477,7 @@ private sendUpnpCmd(String action, Map body = [InstanceID:0, Speed:1]) {
 def generalResponse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-	log.debug "generalResponse_${respMethod}:  ${respData}"
+//	log.debug "generalResponse_${respMethod}:  ${respData}"
 	switch(respMethod) {
 //	----- SOUNDBAR STATUS METHODS -----
 		case "PowerStatus":
@@ -1799,7 +1799,7 @@ def searchRadioList(resp) {
 }
 
 def titleSelected(resp) {
-	log.trace "titleSelected"
+//	log.trace "titleSelected"
 	SetPlaySelect("0", "generalResponse")
 	cpm_SetPlaybackControl("play")
 	runIn(10, cpPlay)
@@ -1809,7 +1809,7 @@ def titleSelected(resp) {
 private getCpDataParse(resp) {
 	def respMethod = (new XmlSlurper().parseText(resp.body)).method
 	def respData = (new XmlSlurper().parseText(resp.body)).response
-	log.trace "getCpDataParse_${respMethod}:  Parsing...."
+//	log.trace "getCpDataParse_${respMethod}:  Parsing...."
 	def player = respData.cpname
 	state.currentPlayer = "${player}"
 	def cpChannels = state.cpChannels

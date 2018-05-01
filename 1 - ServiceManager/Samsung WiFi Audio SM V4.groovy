@@ -17,6 +17,7 @@ on the Samsung WiFi Speakers; primarily various users on GitHub.com.
 01-14-18	Renamed file for release of V2.  Release V2.
 04-11-18	Updated to support TTS with user-selectable Voices.
 04-26-18	First non-Beta release, V4.
+05-01-18	Final updates.  Removed Surrogate Speaker items.
 */
 
 definition(
@@ -43,7 +44,7 @@ def mainPage() {
 				"services are provided to the speakers during the grouping process.\n\r\n\r"
 	def page1 = "Press 'Next' to install Speakers.  Select '<' to return.  There are no" +
 	 			"other options available."
-                
+				
 	return dynamicPage(
 		name: "mainPage",
 		title: "Samsung (Connect) Setup", 
@@ -52,21 +53,6 @@ def mainPage() {
 		uninstall: true){
 		section(intro) {}
 		section(page1) {}
-        section {
-			input "tts_1", "capability.musicPlayer", title: "Select tts_1 Speaker", required: false
-		}
-        section {
-			input "tts_2", "capability.musicPlayer", title: "Select tts_2 Speaker", required: false
-		}
-        section {
-			input "tts_3", "capability.musicPlayer", title: "Select tts_3 Speaker", required: false
-		}
-        section {
-			input "tts_4", "capability.musicPlayer", title: "Select tts_4 Speaker", required: false
-		}
-        section {
-			input "tts_5", "capability.musicPlayer", title: "Select tts_5 Speaker", required: false
-		}
 	}
 }
 
@@ -212,10 +198,10 @@ void addSpeakerModel() {
 void addSpeakerModelHandler(physicalgraph.device.HubResponse hubResponse) {
 	def respBody = hubResponse.xml
 	def model = respBody?.device?.modelName?.text()
-    def hwType = "Speaker"
-    if (model[0..1] == "HW") {
-    	hwType = "Soundbar"
-    }
+	def hwType = "Speaker"
+	if (model[0..1] == "HW") {
+		hwType = "Soundbar"
+	}
 	def uuid = respBody?.device?.UDN?.text()
 	uuid = uuid.replaceAll(/uuid:/, "")
 	def speakers = state.speakers
@@ -236,15 +222,15 @@ void addSwVersion() {
 
 def addSwVersionHandler(resp) {
 	def respBody = new XmlSlurper().parseText(resp.body)
-    def swVersion = respBody.response.version.text()
+	def swVersion = respBody.response.version.text()
 	def swType = "Standard"
 	if (swVersion[-6..-5] == "11") {
 		swType = "SoundPlus"
 	}
-    def volScale = 30
-    if (swType == "SoundPlus") {
-    	volScale = 60
-    }
+	def volScale = 30
+	if (swType == "SoundPlus") {
+		volScale = 60
+	}
 	def ip = respBody.speakerip
 	def speakers = state.speakers
 	def speaker = speakers.find { "$it.value.ip" == "$ip" }
@@ -260,9 +246,9 @@ def verifySpeakersHandler(resp) {
 	def speakers = state.speakers
 	def speaker = speakers.find { "$it.value.ip" == "$ip" }
 	if (speaker) {
-    	if (!speaker.value.name) {
+		if (!speaker.value.name) {
 			speaker.value << [name: respBody.response.spkname.toString(), verified: true]
-        }
+		}
 	}
 }
 
@@ -285,8 +271,8 @@ def addSpeakers() {
 					"deviceMac": selectedSpeaker.value.mac,
 					"model": selectedSpeaker.value.model,
 					"hwType": selectedSpeaker.value.hwType,
-                    "swType": selectedSpeaker.value.swType,
-                    "volScale": selectedSpeaker.value.volScale.toInteger()
+					"swType": selectedSpeaker.value.swType,
+					"volScale": selectedSpeaker.value.volScale.toInteger()
  				]
 			])
 			selectedSpeaker.value << [installed: true]
@@ -322,40 +308,40 @@ def getIP(spkDNI) {
 
 def sendCmdToMain(spkDNI, command, param1, param2, param3, param4) {
 	def child = getChildDevice(spkDNI)
-    switch(command) {
-    	case "playTrackAndResume":
-        	child.playTrackAndResume(param1, param2, param3)
-            break
-    	case "playTrackAndRestore":
-        	child.playTrackAndRestore(param1, param2, param3)
-            break
-    	case "playSoundAndTrack":
-        	child.playSoundAndTrack(param1, param2, param3, param4)
-            break
-    	case "playTrackAtVolume":
-        	child.playTrackAtVolume(param1, param2)
-            break
-    	case "playTrack":
-        	child.playTrack(param1, param2)
-            break
-    	case "playText":
-        	child.playText(param1)
-            break
-        case "playTextAsVoiceAndRestore":
-        	child.playTextAsVoiceAndRestore(param1, param2, param3)
-            break
-        case "playTextAsVoiceAndResume":
-        	child.playTextAsVoiceAndResume(param1, param2, param3)
-            break
-        case "playTextAndRestore":
-        	child.playTextAndRestore(param1, param2)
-            break
-        case "playTextAndResume":
-        	child.playTextAndResume(param1, param2)
-            break
+	switch(command) {
+		case "playTrackAndResume":
+			child.playTrackAndResume(param1, param2, param3)
+			break
+		case "playTrackAndRestore":
+			child.playTrackAndRestore(param1, param2, param3)
+			break
+		case "playSoundAndTrack":
+			child.playSoundAndTrack(param1, param2, param3, param4)
+			break
+		case "playTrackAtVolume":
+			child.playTrackAtVolume(param1, param2)
+			break
+		case "playTrack":
+			child.playTrack(param1, param2)
+			break
+		case "playText":
+			child.playText(param1)
+			break
+		case "playTextAsVoiceAndRestore":
+			child.playTextAsVoiceAndRestore(param1, param2, param3)
+			break
+		case "playTextAsVoiceAndResume":
+			child.playTextAsVoiceAndResume(param1, param2, param3)
+			break
+		case "playTextAndRestore":
+			child.playTextAndRestore(param1, param2)
+			break
+		case "playTextAndResume":
+			child.playTextAndResume(param1, param2)
+			break
  		default:
 			break
-    }
+	}
 }
 
 def sendCmdToSpeaker(spkDNI, command, params, parseAction) {
@@ -374,11 +360,11 @@ def sendCmdToSpeaker(spkDNI, command, params, parseAction) {
 		  	child.GetFunc()
 			break
 		case "setSpkType":
-        	child.setSpkType(params)
-            break
-        case "off":
-        	child.off()
-            break
+			child.setSpkType(params)
+			break
+		case "off":
+			child.off()
+			break
 		default:
 			break
 	}
@@ -402,54 +388,54 @@ def getDataFromSpeaker(spkDNI, command) {
 //	===== Text-to-Speech Capability =====
 //	=====================================
 def sendCmdToSurrogate(ttsSpeaker, playType, uri, duration, volume, selectedSong) {
-    switch(ttsSpeaker) {
-    	case "tts_1":
-        	if (playType == "resume") {
+	switch(ttsSpeaker) {
+		case "tts_1":
+			if (playType == "resume") {
 				tts_1.playTrackAndResume(uri, duration, volume)
-            } else if (playType == "restore") {
+			} else if (playType == "restore") {
 				tts_1.playTrackAndRestore(uri, duration, volume)
-            } else if (playType == "song") {
+			} else if (playType == "song") {
 				tts_1.playSoundAndTrack(uri, duration, selectedSong, volume)
-            }
-	        break
-    	case "tts_2":
-        	if (playType == "resume") {
+			}
+			break
+		case "tts_2":
+			if (playType == "resume") {
 				tts_2.playTrackAndResume(uri, duration, volume)
-            } else if (playType == "restore") {
+			} else if (playType == "restore") {
 				tts_2.playTrackAndRestore(uri, duration, volume)
-            } else if (playType == "song") {
+			} else if (playType == "song") {
 				tts_2.playSoundAndTrack(uri, duration, selectedSong, volume)
-            }
-	        break
-    	case "tts_3":
-        	if (playType == "resume") {
+			}
+			break
+		case "tts_3":
+			if (playType == "resume") {
 				tts_3.playTrackAndResume(uri, duration, volume)
-            } else if (playType == "restore") {
+			} else if (playType == "restore") {
 				tts_3.playTrackAndRestore(uri, duration, volume)
-            } else if (playType == "song") {
+			} else if (playType == "song") {
 				tts_3.playSoundAndTrack(uri, duration, selectedSong, volume)
-            }
-	        break
-    	case "tts_4":
-        	if (playType == "resume") {
+			}
+			break
+		case "tts_4":
+			if (playType == "resume") {
 				tts_4.playTrackAndResume(uri, duration, volume)
-            } else if (playType == "restore") {
+			} else if (playType == "restore") {
 				tts_4.playTrackAndRestore(uri, duration, volume)
-            } else if (playType == "song") {
+			} else if (playType == "song") {
 				tts_4.playSoundAndTrack(uri, duration, selectedSong, volume)
-            }
-	        break
-    	case "tts_5":
-        	if (playType == "resume") {
+			}
+			break
+		case "tts_5":
+			if (playType == "resume") {
 				tts_5.playTrackAndResume(uri, duration, volume)
-            } else if (playType == "restore") {
+			} else if (playType == "restore") {
 				tts_5.playTrackAndRestore(uri, duration, volume)
-            } else if (playType == "song") {
+			} else if (playType == "song") {
 				tts_5.playSoundAndTrack(uri, duration, selectedSong, volume)
-            }
-	        break
-        default:
-        	break
+			}
+			break
+		default:
+			break
 	}
 }
 

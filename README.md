@@ -20,9 +20,5 @@ This device handler for SmartThings integration was completed using the commands
 
 # Installation Instruction
 <img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/Install.jpg" align="center"/>
-
 # HMI Description and Notes
 <img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/AppHMI.jpg" align="center"/>
-
-# TextToSpeech Commands
-<img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/TTSCommands.jpg" align="center"/>

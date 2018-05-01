@@ -18,6 +18,7 @@ f.  Play Text functions with the ability to define voice for speakers and older 
 
 This device handler for SmartThings integration was completed using the commands from Port 55001, as defined at the site "https://sites.google.com/site/moosyresearch/projects/samsung_shape".  My appreciation for the many participants in that effort for their instrumental research and discoveries. 
 
+
 # Installation Instruction
 <img src="https://github.com/DaveGut/Samsung-Multiroom-WiFi-Soundbar-SmartThings-Integration/blob/master/Install.jpg" align="center"/>
 

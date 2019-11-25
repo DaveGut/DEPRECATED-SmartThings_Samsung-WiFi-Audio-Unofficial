@@ -1,6 +1,7 @@
 # Samsung WiFi Audio integration with Smarthings
 
 This integration controls Samsung WiFi Speakers and Soundbars with "Multiroom" capabilities  It has been tested on the Samsung HS-MS650 Soundbar and the R1 Speaker.  It is expected to run on any of the Samsung Multiroom compatible speakers.
+# The speaker MUST be controllable by the Multiroom App for this integration to work.
 
 # Capabilities
 
